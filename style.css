@@ -232,15 +232,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: grab;
+    cursor: pointer;
     z-index: 10000;
     user-select: none;
     -webkit-user-select: none;
-    touch-action: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
     transition: opacity 0.2s ease;
 }
 
-.se-fab:active {
+.se-fab:active,
+.se-fab.se-fab-dragging {
     cursor: grabbing;
 }
 
@@ -1723,6 +1725,12 @@
 /* ---------- 12. 移动端自适应 (Mobile Adaptations) ---------- */
 
 @media (max-width: 768px) {
+    #st-direct-event-root .se-panel,
+    #st-direct-event-root .se-settings,
+    #st-direct-event-root .se-events,
+    #st-direct-event-root .se-presets,
+    #st-direct-event-root .se-api-log,
+    #st-direct-event-root .se-sub-modal,
     .se-panel,
     .se-settings,
     .se-events,
@@ -1730,13 +1738,14 @@
     .se-api-log,
     .se-sub-modal {
         top: auto !important;
-        bottom: 12px !important;
+        bottom: max(12px, env(safe-area-inset-bottom, 12px)) !important;
         right: 12px !important;
         left: 12px !important;
         width: auto !important;
-        max-width: none !important;
-        max-height: 75vh !important;
+        max-width: calc(100vw - 24px) !important;
+        max-height: calc(85vh - env(safe-area-inset-bottom, 0px)) !important;
         border-radius: var(--se-radius-lg) !important;
+        z-index: 10001 !important;
     }
     .se-theme-grid {
         grid-template-columns: 1fr 1fr;
@@ -2775,6 +2784,14 @@
 #st-direct-event-root {
     font-family: "Segoe UI", "Microsoft YaHei", -apple-system, sans-serif;
     color: var(--se-text-main);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#st-direct-event-root :is(button, .se-fab, .se-theme-card, .se-chip, .se-diff-card, .se-sub-turn-card, .se-death-card, [data-action], [data-pv-action], [data-theme-id], [data-capsule-action]) {
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* 一级菜单：主面板全面接入主题变量 */
@@ -2942,6 +2959,9 @@
     background: var(--se-bg-panel);
     box-shadow: var(--se-shadow);
     animation: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 #st-direct-event-root .se-fab img {
     width: 28px;
