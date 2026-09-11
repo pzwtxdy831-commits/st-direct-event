@@ -10,7 +10,7 @@ function harness(options = {}) {
     const no = ()=>null;
     const document = {readyState:'loading',currentScript:{src:'http://localhost:8000/scripts/extensions/third-party/st%20direct/index.js'},addEventListener:no,querySelector:no,getElementById:no};
     const local = new Map();
-    const sandbox = {document,window:{},SillyTavern:{getContext:()=>ctx},URL,AbortController,AbortSignal,setTimeout,clearTimeout,setInterval,clearInterval,Event,
+    const sandbox = {document,window:{},SillyTavern:{getContext:()=>ctx},URL,AbortController,AbortSignal,setTimeout,clearTimeout,setInterval,clearInterval,Event,TextDecoder,Response,DecompressionStream,
         localStorage:{getItem:key=>local.get(key)||null,setItem:(key,value)=>local.set(key,value)}, fetch: options.fetch || fetch,
         console:options.verbose?console:{log:no,warn:no,error:no}, location:{origin:'http://localhost:8000'}};
     sandbox.window=sandbox;
@@ -23,7 +23,7 @@ function harness(options = {}) {
         renderApiLogs = () => {};
         openStageModalForEvent = () => { globalThis.modalOpened = true; };
         globalThis.transportTestApi = fetchWithProxyFallback;
-        globalThis.testApi = {readCompletionBody, getSettings, getChatState, activateEvent, buildEventPrompt, buildTurnGuidance, buildDynamicSlipStructure, buildRecentContext, cleanRecentContext, generateAndSave, askLLM, findTriggeredEvent, buildActiveStagePrompt, bindSTEvents, EventInjectionTool, refreshWorldInfoCache, buildWorldInfoSystemPrompt, DEFAULT_SETTINGS, DEFAULT_PRESETS, DEFAULT_SUB_PROMPTS, DEFAULT_JAILBREAK_PROMPT, DEFAULT_NOVEL_BYPASS_PROMPT, EVENT_TYPES};
+        globalThis.testApi = {readCompletionBody, safeParseJsonResponse, decompressZstd, getSettings, getChatState, activateEvent, buildEventPrompt, buildTurnGuidance, buildDynamicSlipStructure, buildRecentContext, cleanRecentContext, generateAndSave, askLLM, findTriggeredEvent, buildActiveStagePrompt, bindSTEvents, EventInjectionTool, refreshWorldInfoCache, buildWorldInfoSystemPrompt, DEFAULT_SETTINGS, DEFAULT_PRESETS, DEFAULT_SUB_PROMPTS, DEFAULT_JAILBREAK_PROMPT, DEFAULT_NOVEL_BYPASS_PROMPT, EVENT_TYPES};
     })();`;
     vm.runInNewContext(source,sandbox,{filename:'index.js'});
     sandbox.testApi.bindSTEvents();

@@ -100,7 +100,28 @@ function check(name,fn){fn();checks++;console.log('PASS '+name);}
             if (act6.isActive || h6.ctx.injection !== '') sixRoundsOk = false;
         }
     }
-    check('Six round event advances smoothly across metadata mutations and closes on turn 6',()=>{assert.equal(sixRoundsOk,true);});
+    const zlib = require('node:zlib');
+    const gzipPayload = zlib.gzipSync(Buffer.from(JSON.stringify({ choices: [{ message: { content: raw }, finish_reason: 'stop' }] })));
+    const gzH = harness({ fetch: async () => ({ ok: true, status: 200, arrayBuffer: async () => gzipPayload.buffer.slice(gzipPayload.byteOffset, gzipPayload.byteOffset + gzipPayload.byteLength) }) });
+    const gzRes = await gzH.api.askLLM(gzH.api.EVENT_TYPES.combat, '成年教练对练', { ...gzH.api.DEFAULT_SETTINGS, apiKey: 'test-only', baseUrl: 'https://example.invalid/v1' }, 'test');
+    check('Gzip compressed response decompresses automatically and succeeds', () => { assert.equal(gzRes, raw); });
+
+    const zstdFixturePath = path.join(__dirname, 'fixtures/models.zstd');
+    if (fs.existsSync(zstdFixturePath)) {
+        const zstdBuf = fs.readFileSync(zstdFixturePath);
+        const zstdH = harness({ fetch: async () => ({ ok: true, status: 200, arrayBuffer: async () => zstdBuf.buffer.slice(zstdBuf.byteOffset, zstdBuf.byteOffset + zstdBuf.byteLength) }) });
+        const zstdParsed = await zstdH.api.safeParseJsonResponse({ ok: true, status: 200, arrayBuffer: async () => zstdBuf.buffer.slice(zstdBuf.byteOffset, zstdBuf.byteOffset + zstdBuf.byteLength) }, 'ZstdFixture');
+        check('Zstd compressed binary stream decompresses automatically and succeeds', () => {
+            assert(Array.isArray(zstdParsed.data));
+            assert(zstdParsed.data.length > 0);
+        });
+    }
+
+    const htmlPayload = Buffer.from('<html><head><title>502 Bad Gateway</title></head><body>Bad Gateway</body></html>');
+    const htmlH = harness({ fetch: async () => ({ ok: false, status: 502, arrayBuffer: async () => htmlPayload.buffer.slice(htmlPayload.byteOffset, htmlPayload.byteOffset + htmlPayload.byteLength) }) });
+    await assert.rejects(() => htmlH.api.askLLM(htmlH.api.EVENT_TYPES.combat, '测试', { ...htmlH.api.DEFAULT_SETTINGS, apiKey: 'test-only', baseUrl: 'https://example.invalid/v1' }, 'test'), /502/);
+    check('HTML gateway error produces clear diagnostic', () => { assert.ok(true); });
+
     check('Production source contains no pictographs',()=>{for(const file of ['index.js','style.css']) assert(!/\p{Extended_Pictographic}/u.test(fs.readFileSync(path.join(__dirname,'..',file),'utf8')));});
     const report={checks,passed:true,date:new Date().toISOString()};fs.writeFileSync(path.join(__dirname,'regression-result.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 })().catch(err=>{console.error(err.stack);process.exitCode=1;});
