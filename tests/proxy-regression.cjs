@@ -1,0 +1,21 @@
+const assert = require('node:assert/strict');
+const {harness} = require('./harness.cjs');
+(async()=>{
+  let seen=[];
+  const h=harness({ctx:{getRequestHeaders:()=>({'X-CSRF-Token':'session-token'})},fetch:async(url,options)=>{seen.push({url,options});return {status:200};}});
+  await h.sandbox.transportTestApi('https://example.invalid/v1/models',{headers:{Authorization:'Bearer test-only'}},'proxy');
+  assert.equal(seen.length,1);assert.equal(seen[0].url,'/proxy/https://example.invalid/v1/models');
+  assert.equal(seen[0].options.credentials,'same-origin');assert.equal(seen[0].options.headers.Authorization,'Bearer test-only');assert.equal(seen[0].options.headers['X-CSRF-Token'],'session-token');
+  const disabled=harness({fetch:async()=>({status:404,clone:()=>({text:async()=> 'CORS proxy is disabled.'})})});
+  await assert.rejects(()=>disabled.sandbox.transportTestApi('https://example.invalid',{},'proxy'),/重启酒馆/);
+  let calls=0;
+  const denied=harness({fetch:async()=>{calls++;return {status:401};}});
+  assert.equal((await denied.sandbox.transportTestApi('https://example.invalid',{},'auto')).status,401);assert.equal(calls,1);
+  calls=0;
+  const cors=harness({fetch:async()=>{if(++calls===1) throw new TypeError('Failed to fetch');return {status:200};}});
+  await cors.sandbox.transportTestApi('https://example.invalid',{},'auto');assert.equal(calls,2);
+  const controller=new AbortController();controller.abort();calls=0;
+  const cancelled=harness({fetch:async()=>{calls++;throw Object.assign(new Error('aborted'),{name:'AbortError'});}});
+  await assert.rejects(()=>cancelled.sandbox.transportTestApi('https://example.invalid',{signal:controller.signal},'auto'),/aborted/);assert.equal(calls,1);
+  console.log('PASS proxy URL, session, upstream Authorization, disabled guidance, no retry on 401, CORS fallback, abort preservation');
+})().catch(e=>{console.error(e);process.exitCode=1;});

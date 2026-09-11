@@ -1,0 +1,15 @@
+const fs=require('node:fs');
+const path=require('node:path');
+const {harness}=require('./harness.cjs');
+const user=path.resolve(__dirname,'../../../../../../data/default-user');
+const file=path.join(user,'settings.json');
+const s=JSON.parse(fs.readFileSync(file,'utf8'));
+const old=s.extension_settings['st-direct-event'];
+fs.copyFileSync(file,path.join(user,'st-direct-validation/before-system-redesign/settings.json'));
+const bypassKeys=['enableJailbreak','jailbreakPrompt','enableNovelBypass','novelBypassPrompt'];
+const before=JSON.stringify(bypassKeys.map(k=>old[k]));
+const {api}=harness();
+Object.assign(old,{configVersion:7,presets:api.DEFAULT_PRESETS,subPrompts:api.DEFAULT_SUB_PROMPTS,model:'agy-gemini-3.8-flash-high',temperature:0.8,maxTokens:40000,fabIconUrl:''});
+if(JSON.stringify(bypassKeys.map(k=>old[k]))!==before) throw Error('Bypass settings changed');
+fs.writeFileSync(file,JSON.stringify(s,null,4));
+console.log(JSON.stringify({version:old.configVersion,transport:old.requestTransport,model:old.model,temperature:old.temperature,maxTokens:old.maxTokens,bypassUnchanged:true}));

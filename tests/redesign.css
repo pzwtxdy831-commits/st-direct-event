@@ -1,0 +1,47 @@
+/* ST Direct 0.5: quiet studio surface, scoped against host theme styles. */
+#st-direct-event-root {
+    --se-bg: #15191e; --se-bg-card: #1d2229; --se-bg-input: #11151a;
+    --se-bg-hover: #28313a; --se-accent: #b7d9c6; --se-accent-rgb: 183,217,198;
+    --se-text-main: #eef0ed; --se-text-sub: #b1babd;
+    --se-border-subtle: #353e45; --se-border: #353e45;
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    color: var(--se-text-main);
+}
+#st-direct-event-root .se-panel {
+    width: 344px; max-width: calc(100vw - 24px); padding: 0;
+    border: 1px solid #3b444a; border-radius: 20px;
+    background: #15191e; box-shadow: 0 16px 64px #0005;
+    backdrop-filter: none; overflow: auto; max-height: calc(100dvh - 24px);
+}
+#st-direct-event-root .se-panel-header { padding: 20px 20px 16px; border-bottom: 1px solid #ffffff0d; background: transparent; }
+#st-direct-event-root .se-panel-brand { font-size: 16px; letter-spacing: .06em; font-weight: 650; color: #eef0ed; }
+#st-direct-event-root .se-panel-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+#st-direct-event-root .se-stage-engine-card { border: 0; border-left: 2px solid #b7d9c6; background: #1d2429; padding: 14px; border-radius: 0 12px 12px 0; box-shadow: none; margin: 0 0 8px; }
+#st-direct-event-root .se-stage-engine-title { font-size: 11px; letter-spacing: .12em; font-weight: 500; color: #b1babd; }
+#st-direct-event-root .se-stage-engine-desc { font-size: 13px; line-height: 1.7; color: #e1e6e4; margin-top: 8px; }
+#st-direct-event-root .se-stage-engine-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+#st-direct-event-root .se-btn-group { margin: 0; gap: 0; border: 1px solid #353e45; border-radius: 12px; overflow: hidden; min-height: 56px; }
+#st-direct-event-root .se-event-btn { margin: 0; min-height: 56px; border: 0; border-radius: 0; background: #1b2026; padding: 14px 16px; box-shadow: none; transform: none; }
+#st-direct-event-root .se-event-btn:hover { background: #27322e; transform: none; }
+#st-direct-event-root .se-btn-label { font-size: 15px; font-weight: 500; letter-spacing: .12em; }
+#st-direct-event-root .se-badge { background: transparent; border: 0; color: #a8b4b4; font-size: 11px; font-weight: 400; }
+#st-direct-event-root .se-sub-btn { width: 44px; min-width: 44px; margin: 0; border: 0; border-left: 1px solid #353e45; border-radius: 0; background: #1b2026; color: #b7d9c6; }
+#st-direct-event-root button { font-family: inherit; text-shadow: none; cursor: pointer; }
+#st-direct-event-root :is(.se-nav-btn,.se-cap-btn,.se-close-btn,.se-settings-btn,.se-api-toggle,.se-stage-tab-btn,.se-quick-turn-btn) { color: #dce5df !important; background: #222a2f !important; border: 1px solid #3b464b !important; border-radius: 8px; box-shadow: none; font-size: 12px; padding: 7px 10px; line-height: 1.35; }
+#st-direct-event-root .se-nav-grid { gap: 8px; margin: 0; }
+#st-direct-event-root .se-nav-grid button { min-height: 36px; background: transparent !important; border: 1px solid #353e45 !important; color: #bfc9c6 !important; border-radius: 9px; font-size: 12px; }
+#st-direct-event-root .se-divider { margin: 6px 0; opacity: .35; }
+#st-direct-event-root .se-fab { width: 48px; height: 48px; border: 1px solid #b7d9c64d; border-radius: 15px; background: #19241f; box-shadow: 0 6px 24px #0004; animation: none; }
+#st-direct-event-root .se-fab img { width: 28px; height: 28px; filter: none; animation: none; transform: none; }
+#st-direct-event-root .se-fab:hover { background: #2d3c33; }
+#st-direct-event-root :is(.se-settings,.se-events,.se-presets,.se-api-log,.se-sub-modal,.se-stage-modal) { background: #15191e; border: 1px solid #3b444a; border-radius: 18px; box-shadow: 0 20px 80px #0006; color: #eef0ed; }
+#st-direct-event-root :is(input,select,textarea) { font-size: 13px; border: 1px solid #3b444a; padding: 10px 12px; color: #eef0ed; background: #11151a; }
+#st-direct-event-root label { font-size: 12px; color: #bfc9c6; letter-spacing: .02em; }
+#st-direct-event-root .se-floating-capsule { border-radius: 12px; border: 1px solid #3b444a; background: #19221f; box-shadow: 0 6px 20px #0003; }
+#st-direct-event-root :is(.se-stage-card,.se-event-card,.se-api-log-card) { background: #1d2229; border: 1px solid #353e45; border-radius: 12px; box-shadow: none; }
+@media (max-width: 540px) {
+    #st-direct-event-root .se-panel { width: 320px; }
+    #st-direct-event-root .se-panel-header { padding: 16px; }
+    #st-direct-event-root .se-panel-body { padding: 12px; gap: 8px; }
+    #st-direct-event-root .se-stage-engine-actions .se-cap-btn { flex: 1; margin-left: 0 !important; }
+}

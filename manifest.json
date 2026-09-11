@@ -1,0 +1,10 @@
+{
+  "display_name": "随机事件投放器",
+  "name": "st-direct-event",
+  "id": "st-direct-event",
+  "version": "0.5.0",
+  "type": "extension",
+  "js": "index.js",
+  "css": "style.css",
+  "author": "st direct"
+}

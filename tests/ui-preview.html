@@ -1,0 +1,104 @@
+<!doctype html><html lang="zh"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>剧情导演 · 界面预览</title><link rel="stylesheet" href="../style.css"><style>body{background:#e9e9e4;margin:0}*{box-sizing:border-box}button{font:inherit}</style><div id="st-direct-event-root" data-theme="ocean"><div class="se-panel" id="se-panel" style="display:flex;top:24px;left:24px;right:auto">
+                <div class="se-panel-header">
+                    <div class="se-panel-header-left">
+                        <span class="se-brand-dot"></span>
+                        <span class="se-panel-brand">剧情导演</span>
+                        <button type="button" class="se-theme-pill" data-action="cycle-theme" title="点击快速切换主题风格 (当前 7 款预设)">
+                            <span class="se-theme-pill-dot"></span>
+                            <span id="se-theme-name">深海蔚蓝</span>
+                        </button>
+                    </div>
+                    <div class="se-panel-header-right">
+                        <button type="button" class="se-icon-btn" data-action="open-settings" title="全局设置">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        </button>
+                        <button type="button" class="se-icon-btn" data-action="close-panel" title="收起面板">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="se-panel-content">
+                    <div id="se-gen-banner" class="se-gen-banner" style="display:none">
+                        <span id="se-gen-status">正在生成事件…</span>
+                        <button type="button" data-action="cancel-gen" class="se-cancel-btn" title="点击取消当前正在进行的生成">取消生成</button>
+                    </div>
+
+                    <div class="se-stage-engine-card" id="se-stage-engine-card">
+                        <div class="se-stage-engine-head">
+                            <span class="se-stage-engine-title">场景进度</span>
+                            <span class="se-stage-engine-badge" id="se-engine-badge">就绪</span>
+                        </div>
+                        <div class="se-stage-engine-desc" id="se-engine-desc">
+                            选择一个事件，让场景向前一步。
+                        </div>
+                        <div class="se-stage-engine-actions" id="se-engine-actions">
+                            <button type="button" class="se-cap-btn" data-action="open-stage-overview">查看剧本</button>
+                            <button type="button" class="se-cap-btn" data-action="open-last-raw-output" style="margin-left:6px;" title="查看模型原始生成的完整正文">原始档案</button>
+                        </div>
+                    </div>
+
+                    <div class="se-btn-group">
+                        <button class="se-event-btn" data-action="generate" data-event="combat" title="点击生成 / 右键或长按设置细分">
+                            <span class="se-btn-label">战斗</span>
+                            <span class="se-badge" id="se-badge-combat">跑团</span>
+                        </button>
+                        <button class="se-sub-btn" data-action="open-sub" data-event="combat" title="战斗细分设置">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="se-btn-group">
+                        <button class="se-event-btn" data-action="generate" data-event="reasoning" title="点击生成 / 右键或长按设置细分">
+                            <span class="se-btn-label">推理</span>
+                            <span class="se-badge" id="se-badge-reasoning">生活流</span>
+                        </button>
+                        <button class="se-sub-btn" data-action="open-sub" data-event="reasoning" title="推理细分设置">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="se-btn-group">
+                        <button class="se-event-btn" data-action="generate" data-event="romance" title="点击生成 / 右键或长按设置细分">
+                            <span class="se-btn-label">恋爱</span>
+                            <span class="se-badge" id="se-badge-romance">修罗场</span>
+                        </button>
+                        <button class="se-sub-btn" data-action="open-sub" data-event="romance" title="恋爱细分设置">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="se-btn-group">
+                        <button class="se-event-btn se-event-btn-full" data-action="generate" data-event="random" title="随机生成意外事件">
+                            <span class="se-btn-label">随机事件</span>
+                        </button>
+                    </div>
+
+                    <div class="se-divider"></div>
+
+                    <div class="se-nav-grid">
+                        <button class="se-nav-btn" data-action="open-stage-overview" title="查看当前或历史事件的分轮大纲与暗线">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                            阶段大纲
+                        </button>
+                        <button class="se-nav-btn" data-action="open-events" title="已生成的历史事件列表">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                            事件列表
+                        </button>
+                        <button class="se-nav-btn" data-action="open-presets" title="查看与调整预设提示词">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="2"/></svg>
+                            预设工坊
+                        </button>
+                        <button class="se-nav-btn" data-action="open-api-log" title="查看副AI请求与响应日志">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+                            API 日志
+                        </button>
+                        <button class="se-nav-btn" data-action="open-settings" title="模型接口与插件设置">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            全局设置
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            </div></html>

@@ -1,0 +1,22 @@
+﻿# Temporary backup files
+*.bak*
+*.bak_*
+backup-*/
+
+# Unrelated nested extensions
+World-master/
+
+# Archives & binaries
+*.rar
+*.zip
+*.7z
+
+# Logs & temp
+*.log
+scratch/
+.system_generated/
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini

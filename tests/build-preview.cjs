@@ -1,0 +1,13 @@
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.join(__dirname,'..');
+let css=fs.readFileSync(path.join(root,'style.css'),'utf8').replaceAll('.se-panel-body','.se-panel-content');
+fs.writeFileSync(path.join(root,'style.css'),css);
+const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><rect x="6" y="5" width="20" height="22" rx="4" stroke="#b7d9c6" stroke-width="1.5"/><path d="M11 11h10M11 16h10M11 21h5" stroke="#b7d9c6" stroke-width="1.5" stroke-linecap="round"/><circle cx="23" cy="24" r="5" fill="#b7d9c6"/><path d="m22 22 3 2-3 2z" fill="#19241f"/></svg>';
+fs.copyFileSync(path.join(root,'director.svg'),path.join(root,'director.before-studio.svg'));
+fs.writeFileSync(path.join(root,'director.svg'),svg);
+const src=fs.readFileSync(path.join(root,'index.js'),'utf8');
+const start=src.indexOf('<div class="se-panel" id="se-panel"');
+const stop=src.indexOf('<div class="se-settings',start);
+let markup=src.slice(start,stop).replace('style="display:none"','style="display:flex;top:24px;left:24px;right:auto"').replace(/\$\{[^}]*\}/g,'');
+fs.writeFileSync(path.join(__dirname,'ui-preview.html'),'<!doctype html><html lang="zh"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>剧情导演 · 界面预览</title><link rel="stylesheet" href="../style.css"><style>body{background:#e9e9e4;margin:0}*{box-sizing:border-box}button{font:inherit}</style><div id="st-direct-event-root" data-theme="ocean">'+markup+'</div></html>');

@@ -1,0 +1,411 @@
+const DIRECTOR_BLOCK = /(?:<(director_override|director_event|director_system_override|director_multiround_override|st_direct_slip)\b[^>]*>[\s\S]*?<\/\1\s*>|\[System Directive:[\s\S]*?\])/gi;
+    let runtimeEvent = null;
+    let generationRun = null;
+    let lastInjectionDiagnostic = null;
+
+    function stripDirectorBlocks(value) {
+        return String(value || '').replace(DIRECTOR_BLOCK, '').trim();
+    }
+
+    function plainMessageContent(message) {
+        if (typeof message?.content === 'string') return message.content;
+        if (Array.isArray(message?.content)) return message.content.filter(p => p?.type === 'text').map(p => p.text || '').join('\n');
+        return '';
+    }
+
+    function mapMessageText(message, transform) {
+        if (typeof message.content === 'string') message.content = transform(message.content);
+        else if (Array.isArray(message.content)) {
+            for (const part of message.content) if (part?.type === 'text') part.text = transform(part.text || '');
+        }
+    }
+
+    function normalizeEventToken(value) {
+        return stripDirectorBlocks(value).replace(/<[^>]+>/g, '').normalize('NFKC').replace(/[\s\u200B-\u200D\uFEFF]/g, '').toLowerCase();
+    }
+
+    function findTriggeredEvent(value, explicitId) {
+        const events = getChatState().events || [];
+        if (explicitId) return events.find(e => e.id === explicitId) || null;
+        const text = normalizeEventToken(value);
+        return events.find(event => {
+            const id = normalizeEventToken(event.id);
+            const shortId = id.match(/[abcd]\d{4,}$/)?.[0];
+            const variants = [id, shortId].filter(Boolean);
+            return variants.some(token => {
+                if (!text.includes(token)) return false;
+                const remainder = text.replace(token, '').replace(normalizeEventToken(event.title), '')
+                    .replace(/突发事件|触发|启动|发送|开始|事件/g, '').replace(/[【】\[\]()（）:：、，,.。!！]/g, '');
+                return remainder === '';
+            });
+        }) || null;
+    }
+
+    function resolveActiveEvent() {
+        const state = getChatState();
+        const ctx = getCtx();
+        if (generationRun && (!generationRun.chatId || !ctx?.chatId || generationRun.chatId === ctx.chatId) && generationRun.replayActive) return generationRun.replayActive;
+        if (state.activeEvent) {
+            runtimeEvent = { state, chatId: ctx?.chatId, active: state.activeEvent };
+            return state.activeEvent.isActive ? state.activeEvent : null;
+        }
+        if (runtimeEvent?.state === state && runtimeEvent.chatId === ctx?.chatId && runtimeEvent.active?.isActive) {
+            state.activeEvent = runtimeEvent.active;
+            return state.activeEvent;
+        }
+        return null;
+    }
+
+    function activateEvent(event, force = false) {
+        if (!event) throw new Error('找不到待激活事件');
+        const state = getChatState();
+        if (!force && state.activeEvent?.isActive && state.activeEvent.id === event.id) return state.activeEvent;
+        const turns = Math.min(30, Math.max(1, Math.floor(Number(event.maxTurns) || (Array.isArray(event.stages) ? event.stages.length : 0) || 2)));
+        let stages = Array.isArray(event.stages) && event.stages.length ? event.stages : null;
+        let theKey = event.theKey;
+        let endings = event.endings;
+        let goodEnd = event.goodEnd;
+        let badEnd = event.badEnd;
+        if (!stages || !theKey || !endings) {
+            const parsed = EventInjectionTool.parse(event.content, stages?.length || turns, event.title);
+            stages = parsed.stages;
+            theKey = parsed.theKey;
+            endings = parsed.endings;
+            goodEnd = parsed.goodEnd;
+            badEnd = parsed.badEnd;
+        }
+        const active = {
+            id: event.id, title: event.title, type: event.type, currentTurn: 1, maxTurns: turns,
+            stages, theKey, endings,
+            goodEnd, badEnd, isActive: true,
+            activationToken: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            lastCountedMessageId: null, lastCountedUserMessageId: null, updatedAt: Date.now()
+        };
+        state.activeEvent = active;
+        runtimeEvent = { state, chatId: getCtx()?.chatId, active };
+        return active;
+    }
+
+    const EventInjectionTool = {
+        parse(content, configuredTurns = 2, defaultTitle = '突发事件') {
+            const raw = String(content || '').replace(/^\s*```(?:xml|html|text)?\s*\n?|\n?```\s*$/gi, '').trim();
+            const expected = Math.min(30, Math.max(1, Math.floor(Number(configuredTurns) || 2)));
+            const archive = raw.match(/<event_archive\b[^>]*>([\s\S]*?)<\/event_archive\s*>/i)?.[1]?.trim() || '';
+            const endings = raw.match(/<event_endings\b[^>]*>([\s\S]*?)<\/event_endings\s*>/i)?.[1]?.trim() || '';
+            const stages = [];
+            const tag = /<segment_(\d+)\b([^>]*)>([\s\S]*?)(?:<\/segment_\d*\s*>|(?=<segment_\d+\b|<event_endings\b|$))/gi;
+            let match;
+            while ((match = tag.exec(raw))) {
+                const rawContent = match[3].replace(/<\/segment_\d+\s*>/gi, '').trim();
+                stages.push({ index: Number(match[1]), title: match[2].match(/title\s*=\s*["']([^"']*)["']/i)?.[1]?.trim() || `第 ${match[1]} 轮小纸条`, content: rawContent });
+            }
+            let theKey = archive;
+            let finalRules = endings;
+            if (!stages.length && !/<segment_\d+/i.test(raw)) {
+                const headings = [];
+                const heading = /^\s*(?:#{1,6}\s*)?(?:\*\*)?【?\s*(后台暗箱核心档案|后台档案|破局暗线|核心诡计|内心密码|第\s*[零一二三四五六七八九十两\d]+\s*(?:轮小纸条|轮|阶段)|Good End|Bad End|终局分支)[^\n\r]*$/gim;
+                while ((match = heading.exec(raw))) headings.push({index: match.index, end: heading.lastIndex, label: match[1], title: match[0].replace(/[#*【】]/g, '').trim()});
+                const number = text => {
+                    if (/^\d+$/.test(text)) return Number(text);
+                    const digits = '零一二三四五六七八九';
+                    if (text === '两') return 2;
+                    if (text.includes('十')) { const [a,b] = text.split('十'); return (a ? digits.indexOf(a) : 1) * 10 + (b ? digits.indexOf(b) : 0); }
+                    return digits.indexOf(text);
+                };
+                for (let i = 0; i < headings.length; i++) {
+                    const h = headings[i];
+                    const body = raw.slice(h.end, headings[i + 1]?.index ?? raw.length).trim();
+                    const round = h.label.match(/第\s*([零一二三四五六七八九十两\d]+)/);
+                    if (round) stages.push({index: number(round[1]), title: h.title, content: body});
+                    else if (/End|终局分支/i.test(h.label)) finalRules += `\n${h.label}：${body}`;
+                    else theKey += `\n${body}`;
+                }
+            }
+            stages.sort((a,b) => a.index - b.index);
+            if (stages.length !== expected || stages.some((stage, i) => stage.index !== i + 1 || !stage.content || /<\/?(?:event_archive|event_endings|segment_\d+)\b/i.test(stage.content))) {
+                throw new Error(`事件结构不完整：需要连续 ${expected} 张小纸条，实际解析 ${stages.length} 张。已停止投递，避免原始大纲泄露；请重新生成。`);
+            }
+            if (!theKey.trim() || !finalRules.trim()) throw new Error('事件缺少后台档案或结局条件，已停止投递；请重新生成。');
+            const goodEnd = finalRules.match(/(?:【?Good End[^\n】]*】?\s*[:：]?)([\s\S]*?)(?=\n[^\n]*Bad End|$)/i)?.[1]?.trim() || '';
+            const badEnd = finalRules.match(/(?:【?Bad End[^\n】]*】?\s*[:：]?)([\s\S]*)/i)?.[1]?.trim() || '';
+            return {stages, theKey: theKey.trim(), endings: finalRules.trim(), goodEnd, badEnd};
+        },
+
+        buildSegmentPrompt(event, currentRound, totalRounds) {
+            if (!event) return '';
+            const current = Math.max(1, Math.floor(Number(currentRound) || 1));
+            const total = Math.max(1, Math.floor(Number(totalRounds) || Number(event.maxTurns) || 2));
+            const stages = event.stages;
+            if (!Array.isArray(stages) || !stages.length || current > total) return '';
+            const final = current === total;
+            // 预算调整时只复用中盘节点，绝不因缺轮提前取出终局纸条。
+            const index = final
+                ? stages.length - 1
+                : Math.max(0, Math.min(Math.max(0, stages.length - 2), Math.floor((current - 1) * (stages.length - 1) / Math.max(1, total - 1))));
+            const segment = stages[index] || stages[0];
+            if (!segment) return '';
+            const genreRule = {
+                combat: '战斗特化：只呈现双方实际动作、位置、距离、消耗与可观察破绽，不代投玩家骰子，不凭空削弱或增强角色。',
+                reasoning: '推理特化：只呈现客观物证、可疑现场与NPC的主动遮掩；不得抢先指出玩家尚未推导出的答案。',
+                romance: '恋爱特化：只推进当下情感互动与试探，保持角色性格边界，不套用战斗惩罚模板，不强迫玩家接受亲密。',
+                random: '随机特化：依照当前场景发生客观局部突变与意外连锁，以具体行动反馈推进，不强行升级灾难。'
+            }[event.type] || '';
+            return [
+                '<st_direct_slip>',
+                `【剧情导演现场指示与裁判】事件编号：${event.id}，进度：第 ${current}/${total} 回合${final ? '（终局收束判定）' : '（中盘推进与留钩）'}。`,
+                '【核心执行铁律】：',
+                '1. 【剧情显化强制】：严禁一笔带过、无视纸条或视作后台建议！本轮正文必须将纸条指示的突发客观环境变故与NPC行动当场显化并写进实际场景正文，推动剧情产生实质物理或心理变局。',
+                '2. 【玩家真实言行裁判准则】：必须以玩家最新实际输入的具体动作与发言为唯一现实既定事实！严禁假定玩家态度，严禁代写玩家言行、内心与决定。若玩家上一轮言行产生合理干预，依据物理因果与NPC动机给出真实反馈；若玩家尚未察觉事件，NPC的主动动作与客观危机必须主动显现，制造紧迫压迫感，强行推动局势咬合。',
+                '3. 【末尾动作留钩 (Action Hook)】：正文末尾绝对严禁进行概括升华、说教总结或单方面擅自替局势画上句号。必须停留在NPC的具体逼问、关键动作交互、物理危机抉择或明确的现场情境上，留下清晰的操作空间，以供玩家在下一轮作出选择！',
+                `【本轮可执行客观内容】\n${segment.content}`,
+                genreRule,
+                final ? `【终局后台判定依据】\n后台真相档案：\n${event.theKey || ''}\n结局分支判定标准：\n${event.endings || [event.goodEnd, event.badEnd].filter(Boolean).join('\n')}` : '',
+                final
+                    ? '【终局裁判指令】：结合玩家在整个事件中的实际行动与全盘表现，严格对照上述结局条件进行客观裁决（Good End / Bad End 或中性余波）。允许玩家因机智应对取得部分成功，也允许因疏忽付出相称代价。完成事件结算后，使场景回归自然日常，不再重新挑起同一已收束的冲突。'
+                    : '【中盘推进指令】：本轮严格保密，严禁剧透后台档案与最终答案，严禁在正文中出现小纸条标签与元指令。NPC根据自身动机主动向前推进一步，正文结尾务必抛出紧迫的动作钩子（Action Hook），把决定权交还给玩家。',
+                '绝对禁止代写玩家的台词、动作、内心和选择。纸条标签、导演指令与判定清单严禁出现在正文。不得使用表情符号。',
+                '</st_direct_slip>'
+            ].filter(Boolean).join('\n');
+        },
+                inject(event, round) {
+            return registerInjection(this.buildSegmentPrompt(event, round, event.maxTurns));
+        },
+        advance(active) {
+            if (!active?.isActive) return;
+            active.currentTurn = (Number(active.currentTurn) || 1) + 1;
+            if (active.currentTurn > active.maxTurns) { active.isActive = false; this.clear(); }
+            else this.inject(active, active.currentTurn);
+        },
+        clear() { unregisterInjection(); },
+        getDiagnostics() { return lastInjectionDiagnostic ? {...lastInjectionDiagnostic} : null; }
+    };
+    window.EventInjectionTool = EventInjectionTool;
+
+    function parseEventStages(content, defaultTitle = '突发事件', eventType = '', configuredTurns = 2) {
+        return EventInjectionTool.parse(content, configuredTurns, defaultTitle);
+    }
+
+    function getActiveStageInfo(active) {
+        if (!active?.stages?.length) return null;
+        const curTurn = Math.max(1, Number(active.currentTurn) || 1);
+        const maxTurns = Math.max(1, Number(active.maxTurns) || active.stages.length);
+        const totalStages = active.stages.length;
+        const final = curTurn >= maxTurns;
+        const stageIdx = final ? totalStages - 1 : Math.max(0, Math.min(totalStages - 2, Math.floor((curTurn - 1) * (totalStages - 1) / Math.max(1, maxTurns - 1))));
+        const stage = active.stages[stageIdx];
+        return {stageIdx, stageNumber: stageIdx + 1, totalStages, curTurn, maxTurns, stageTitle: stage.title, stageContent: stage.content, isFinalStage: final, theKey: active.theKey || '', goodEnd: active.goodEnd || '', badEnd: active.badEnd || ''};
+    }
+
+    function buildActiveStagePrompt(active) {
+        return active ? EventInjectionTool.buildSegmentPrompt(active, active.currentTurn || 1, active.maxTurns) : '';
+    }
+
+    function buildHiddenEventMessage(event) {
+        return event ? `【突发事件】${event.title || '突发事件'} (${event.id})` : '';
+    }
+
+    function buildPromptInjection(event) {
+        const active = resolveActiveEvent();
+        return active?.id === event?.id ? buildActiveStagePrompt(active) : EventInjectionTool.buildSegmentPrompt(event, 1, event?.maxTurns);
+    }
+
+    function registerInjection(eventOrContent) {
+        const ctx = getCtx();
+        const content = typeof eventOrContent === 'string' ? eventOrContent : buildPromptInjection(eventOrContent);
+        if (typeof ctx?.setExtensionPrompt === 'function') {
+            ctx.setExtensionPrompt(INJECTION_NAME, content || '', INJ_POSITION, INJ_DEPTH, false, 0);
+            return true;
+        }
+        if (typeof ctx?.registerInjection === 'function') {
+            ctx.unregisterInjection?.(INJECTION_NAME);
+            if (content) ctx.registerInjection(INJECTION_NAME, content, {position: INJ_POSITION, depth: INJ_DEPTH, role: 'system'});
+            return true;
+        }
+        return false;
+    }
+
+    function unregisterInjection() { registerInjection(''); }
+
+    function onMessageSent(chatId) {
+        const ctx = getCtx();
+        const chat = ctx?.chat || [];
+        const index = typeof chatId === 'number' ? chatId : chat.length - 1;
+        const message = chat[index];
+        if (!message?.is_user) return;
+        const pendingInThisChat = pendingHiddenEvent && getChatState().events.includes(pendingHiddenEvent);
+        const event = findTriggeredEvent(message.mes, message.extra?.event_id) || (pendingInThisChat && findTriggeredEvent(message.mes, pendingHiddenEvent.id));
+        if (!event) return;
+        const active = activateEvent(event);
+        message.extra ||= {};
+        message.extra.is_event = true;
+        message.extra.event_id = event.id;
+        if (findTriggeredEvent(message.mes)) {
+            message.mes = buildHiddenEventMessage(event);
+            message.extra.display_text = message.mes;
+        }
+        active.triggerMessageId = index;
+        pendingHiddenEvent = null;
+        activeInjectedEvent = event;
+        EventInjectionTool.inject(active, active.currentTurn);
+        void saveChatState();
+        updateFloatingCapsule();
+    }
+
+    function onUserMessageRendered(messageId) {
+        const message = getCtx()?.chat?.[messageId];
+        if (!message?.is_user || !message.extra?.is_event) return;
+        const el = document.querySelector(`#chat [mesid="${Number(messageId)}"] .mes_text`);
+        if (el && message.extra.display_text) el.textContent = message.extra.display_text;
+    }
+
+    function cleanHistoricalEventMessages() {
+        const ctx = getCtx();
+        let changed = false;
+        for (const [index, message] of (ctx?.chat || []).entries()) {
+            if (!message?.is_user || !message.extra?.is_event) continue;
+            const clean = stripDirectorBlocks(message.mes);
+            if (message.mes !== clean || message.extra.display_text !== clean) {
+                message.mes = clean;
+                message.extra.display_text = clean;
+                changed = true;
+            }
+            onUserMessageRendered(index);
+        }
+        if (changed) void saveChatState();
+    }
+
+    function onGenerationStarted(type, options, dryRun) {
+        if (dryRun) return;
+        const ctx = getCtx();
+        generationRun = {type, chatId: ctx?.chatId, stopped: false, injected: false};
+        if (['swipe', 'regenerate', 'continue'].includes(type)) {
+            const last = ctx?.chat?.filter(m => !m.is_user && !m.is_system).at(-1);
+            const mark = last?.extra?.st_direct;
+            const active = getChatState().activeEvent;
+            if (mark && active?.id === mark.eventId && active.activationToken === mark.activationToken) {
+                generationRun.replayActive = {...active, currentTurn: mark.round, isActive: true};
+            }
+        }
+        const active = resolveActiveEvent();
+        if (active && !['quiet', 'impersonate'].includes(type)) EventInjectionTool.inject(active, active.currentTurn);
+        else unregisterInjection();
+    }
+
+    function onGenerateBeforeCombinePrompts(data) {
+        if (data?.dryRun || ['quiet', 'impersonate'].includes(generationRun?.type)) return;
+        const active = resolveActiveEvent();
+        if (active) EventInjectionTool.inject(active, active.currentTurn);
+    }
+
+    function attachSlip(text, slip) {
+        const cleaned = stripDirectorBlocks(text);
+        const pattern = /<interactive_input\b[^>]*>([\s\S]*?)<\/interactive_input\s*>/gi;
+        const matches = [...cleaned.matchAll(pattern)];
+        if (!matches.length) return `<interactive_input>\n${cleaned}\n\n${slip}\n</interactive_input>`;
+        const last = matches.at(-1);
+        const insertion = last[0].replace(/<\/interactive_input\s*>$/i, () => `\n${slip}\n</interactive_input>`);
+        return cleaned.slice(0, last.index) + insertion + cleaned.slice(last.index + last[0].length);
+    }
+
+    function onChatCompletionPromptReady(eventData) {
+        if (!Array.isArray(eventData?.chat) || eventData.dryRun) return;
+        const ctx = getCtx();
+        const chat = eventData.chat;
+        // 清理所有消息中的历史导演区块
+        for (const item of chat) if (item) mapMessageText(item, stripDirectorBlocks);
+        // 清理因剥离导演块而变空的消息（例如历史注入残留的空系统消息）
+        for (let i = chat.length - 1; i >= 0; i--) {
+            if (!plainMessageContent(chat[i]).trim()) chat.splice(i, 1);
+        }
+        if (['quiet', 'impersonate'].includes(generationRun?.type)) return;
+        const userMessages = chat.filter(m => m?.role === 'user');
+        const latestPlayer = ctx?.chat?.filter(m => m?.is_user).at(-1);
+        const playerText = normalizeEventToken(latestPlayer?.mes);
+        const wrapperCandidates = userMessages.filter(m => /<interactive_input\b[^>]*>[\s\S]*?<\/interactive_input\s*>/i.test(plainMessageContent(m)));
+        const exact = userMessages.filter(m => playerText && normalizeEventToken(plainMessageContent(m)).includes(playerText));
+        let target = exact.at(-1) || wrapperCandidates.at(-1) || userMessages.at(-1);
+        let active = resolveActiveEvent();
+        if (!active) {
+            const event = findTriggeredEvent(plainMessageContent(target)) || findTriggeredEvent(latestPlayer?.mes, latestPlayer?.extra?.event_id);
+            // 历史事件徽标不能在普通后续生成时复活已结束的事件。
+            if (event && getChatState().activeEvent?.id !== event.id) active = activateEvent(event);
+        }
+        if (!active) return;
+        const slip = buildActiveStagePrompt(active);
+        if (!slip) {
+            active.isActive = false;
+            unregisterInjection();
+            return;
+        }
+        // 确保玩家输入保持绝对纯净：不再将纸条注入 target.content
+        // 而是将小纸条作为独立的 Role: system 消息注入到消息数组中
+        const systemMessage = { role: 'system', content: slip };
+        const targetIndex = target ? chat.lastIndexOf(target) : -1;
+        if (targetIndex >= 0) {
+            chat.splice(targetIndex + 1, 0, systemMessage);
+        } else {
+            chat.push(systemMessage);
+        }
+        markInjection(active, 'chat', chat.indexOf(systemMessage));
+    }
+
+    function markInjection(active, mode, messageIndex) {
+        const ctx = getCtx();
+        if (!generationRun || (generationRun.chatId && ctx?.chatId && generationRun.chatId !== ctx.chatId)) {
+            generationRun = {type: 'normal', chatId: ctx?.chatId, stopped: false};
+        }
+        Object.assign(generationRun, {injected: true, eventId: active.id, round: active.currentTurn, activationToken: active.activationToken, userMessageId: ctx?.chat?.findLastIndex(m => m?.is_user)});
+        lastInjectionDiagnostic = {eventId: active.id, round: active.currentTurn, total: active.maxTurns, mode, messageIndex, systemInjected: true, time: new Date().toISOString()};
+    }
+
+    function onGenerateAfterCombinePrompts(eventData) {
+        if (typeof eventData?.prompt !== 'string' || eventData.dryRun) return;
+        eventData.prompt = stripDirectorBlocks(eventData.prompt);
+        if (['quiet', 'impersonate'].includes(generationRun?.type)) return;
+        const active = resolveActiveEvent();
+        if (!active) return;
+        const slip = buildActiveStagePrompt(active);
+        if (!slip) {
+            active.isActive = false;
+            unregisterInjection();
+            return;
+        }
+        // 文本模式追加独立的 System 指令块，保持玩家输入纯净
+        eventData.prompt = `${eventData.prompt}\n\n[System Directive:\n${slip}\n]`;
+        markInjection(active, 'text', null);
+    }
+
+    async function onGenerationEnded(messageId, generationType) {
+        const run = generationRun;
+        // 等当前事件栈结束，让停止按钮和流式结束信号有机会更新状态。
+        await new Promise(resolve => setTimeout(resolve, 0));
+        const ctx = getCtx();
+        if (!run?.injected || run.stopped || run.committed) return;
+        if (run.chatId && ctx?.chatId && run.chatId !== ctx.chatId) return;
+        const type = generationType || run.type;
+        if (['swipe', 'regenerate', 'continue', 'append', 'first_message', 'quiet', 'impersonate'].includes(type)) return;
+        const actualMessageId = (typeof messageId === 'number' && ctx?.chat?.[messageId])
+            ? messageId
+            : ctx?.chat?.findLastIndex(m => !m.is_user && !m.is_system);
+        if (actualMessageId == null || actualMessageId < 0) return;
+        const message = ctx?.chat?.[actualMessageId];
+        if (!message || message.is_user || message.is_system || !String(message.mes || '').trim()) return;
+        const active = getChatState().activeEvent;
+        if (!active?.isActive || active.id !== run.eventId) return;
+        if (active.lastCountedMessageId === actualMessageId) return;
+        run.committed = true;
+        message.extra ||= {};
+        message.extra.st_direct = {eventId: active.id, activationToken: active.activationToken, round: run.round};
+        active.lastCountedMessageId = actualMessageId;
+        if (run.userMessageId != null && run.userMessageId >= 0) {
+            active.lastCountedUserMessageId = run.userMessageId;
+        }
+        EventInjectionTool.advance(active);
+        await saveChatState();
+        updateFloatingCapsule();
+        renderEventList();
+    }
+
+
+
+    
