@@ -4047,5 +4047,14 @@
     word-break: break-all;
 }
 
+#se-wand-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
 
-
+#se-wand-menu-item i {
+    color: var(--se-accent, #38bdf8);
+    font-size: 14px;
+}

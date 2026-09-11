@@ -117,6 +117,7 @@
         fabIconUrl: '',
         fabX: null,
         fabY: null,
+        hideFab: false,
         theme: 'ocean',
         enableWorldInfo: true,
         worldInfoSelections: null,
@@ -520,6 +521,52 @@
 
     // ========== 初始化 ==========
 
+    const WAND_MENU_ITEM_ID = 'se-wand-menu-item';
+
+    function injectWandMenuButton() {
+        const tryInject = () => {
+            const menu = document.getElementById('extensionsMenu');
+            if (!menu) return false;
+            if (document.getElementById(WAND_MENU_ITEM_ID)) return true;
+
+            const item = document.createElement('div');
+            item.className = 'extension_container interactable';
+            item.tabIndex = 0;
+            item.innerHTML = `
+                <a id="${WAND_MENU_ITEM_ID}" class="list-group-item" href="#" title="剧情导演">
+                    <i class="fa-solid fa-clapperboard"></i>
+                    <span>剧情导演</span>
+                </a>
+            `;
+
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                togglePanel();
+                if (window.$ && $('#extensionsMenu').length) {
+                    $('#extensionsMenu').hide();
+                } else {
+                    menu.style.display = 'none';
+                }
+            });
+
+            menu.appendChild(item);
+            return true;
+        };
+
+        if (tryInject()) return;
+        const timer = setInterval(() => {
+            if (tryInject()) clearInterval(timer);
+        }, 500);
+
+        // 监听魔杖按钮点击事件与 DOM 变动，确保随时重新挂载
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#extensionsMenuButton, .extensionsMenuExtensionButton')) {
+                setTimeout(tryInject, 50);
+            }
+        });
+    }
+
     function init() {
         if (initialized) return;
         initialized = true;
@@ -527,6 +574,7 @@
             mountUI();
             bindSTEvents();
             updateFloatingCapsule();
+            injectWandMenuButton();
             console.log('[ST Direct] 剧情导演 v0.5.0 已启动（独立系统纸条 + 分轮暗箱）');
             if (window.toastr) {
                 toastr.success('剧情导演 v0.5.0 已加载（独立系统纸条与分轮暗箱已就绪）', '', { timeOut: 2500 });
@@ -610,6 +658,9 @@
                         </button>
                     </div>
                     <div class="se-panel-header-right">
+                        <button type="button" class="se-icon-btn" data-action="toggle-hide-fab" title="隐藏/恢复桌面悬浮球 (隐藏后可从魔法棒随时打开)">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                        </button>
                         <button type="button" class="se-icon-btn" data-action="open-settings" title="全局设置">
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                         </button>
@@ -773,6 +824,11 @@
                         <button data-action="reset-fab">恢复默认图标</button>
                         <button data-action="reset-position">重置悬浮球位置</button>
                     </div>
+
+                    <label class="se-check-label">
+                        <input id="se-hide-fab" type="checkbox" />
+                        隐藏桌面悬浮球（隐藏后可通过输入框左侧魔法棒「剧情导演」随时打开）
+                    </label>
 
                     <label class="se-check-label">
                         <input id="se-enable-jailbreak" type="checkbox" />
@@ -1014,6 +1070,7 @@
         document.addEventListener('click', (e) => {
             if (!root) return;
             if (root.contains(e.target)) return;
+            if (e.target.closest && e.target.closest('#' + WAND_MENU_ITEM_ID)) return;
             const panel = root.querySelector('#se-panel');
             if (panel && panel.style.display !== 'none') {
                 panel.style.display = 'none';
@@ -1079,6 +1136,15 @@
             panel.style.left = '';
             panel.style.right = '';
             panel.style.bottom = '';
+            return;
+        }
+
+        const s = getSettings();
+        if (s.hideFab || !fab || fab.style.display === 'none') {
+            panel.style.top = '60px';
+            panel.style.right = '24px';
+            panel.style.left = 'auto';
+            panel.style.bottom = 'auto';
             return;
         }
 
@@ -1750,6 +1816,13 @@
         const fab = root.querySelector('.se-fab');
         if (!fab) return;
 
+        if (s.hideFab) {
+            fab.style.display = 'none';
+            return;
+        } else {
+            fab.style.display = 'flex';
+        }
+
         const img = fab.querySelector('img');
         if (img) {
             img.style.display = '';
@@ -2203,6 +2276,23 @@
             return;
         }
 
+        if (action === 'toggle-hide-fab') {
+            const s = getSettings();
+            s.hideFab = !s.hideFab;
+            persistSettings(s);
+            applyFabSettings();
+            const chk = root?.querySelector('#se-hide-fab');
+            if (chk) chk.checked = !!s.hideFab;
+            if (window.toastr) {
+                if (s.hideFab) {
+                    toastr.info('桌面悬浮球已隐藏。随时可通过输入框左侧魔法棒【剧情导演】唤起面板', '', { timeOut: 3500 });
+                } else {
+                    toastr.success('桌面悬浮球已恢复显示', '', { timeOut: 2000 });
+                }
+            }
+            return;
+        }
+
         if (action === 'cycle-theme') {
             cycleTheme();
             return;
@@ -2547,6 +2637,7 @@
         setChecked('se-enable-jailbreak', s.enableJailbreak !== false);
         setChecked('se-enable-novel-bypass', s.enableNovelBypass !== false);
         setChecked('se-enable-world-info', s.enableWorldInfo !== false);
+        setChecked('se-hide-fab', !!s.hideFab);
         setChecked('se-auto-send', s.autoSend !== false);
 
         const themeSelect = root?.querySelector('#se-theme-select');
@@ -2590,6 +2681,7 @@
             enableJailbreak: checked('se-enable-jailbreak'),
             enableNovelBypass: checked('se-enable-novel-bypass'),
             enableWorldInfo: checked('se-enable-world-info'),
+            hideFab: checked('se-hide-fab'),
             worldInfoSelections: current.worldInfoSelections || null,
             worldInfoOverrides: current.worldInfoOverrides || null,
             customWorldInfoEntries: current.customWorldInfoEntries || [],
