@@ -229,6 +229,10 @@
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -497,10 +501,13 @@
 .se-panel-content {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 10px 12px 12px 12px;
     gap: 8px;
     overflow-y: auto;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* ---------- 4. 正在生成状态横幅 (Live Generation Banner) ---------- */
@@ -1723,20 +1730,36 @@
 /* ---------- 12. 移动端自适应 (Mobile Adaptations) ---------- */
 
 @media (max-width: 768px) {
-    .se-panel,
-    .se-settings,
-    .se-events,
-    .se-presets,
-    .se-api-log,
-    .se-sub-modal {
-        top: auto !important;
-        bottom: 12px !important;
+    #st-direct-event-root .se-panel,
+    #st-direct-event-root .se-settings,
+    #st-direct-event-root .se-events,
+    #st-direct-event-root .se-presets,
+    #st-direct-event-root .se-api-log,
+    #st-direct-event-root .se-sub-modal,
+    #st-direct-event-root .se-stage-modal {
+        top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+        bottom: auto !important;
         right: 12px !important;
         left: 12px !important;
+        margin: 0 auto !important;
         width: auto !important;
-        max-width: none !important;
-        max-height: 75vh !important;
+        max-width: min(420px, calc(100vw - 24px)) !important;
+        height: auto !important;
+        max-height: calc(100vh - 20px) !important;
+        max-height: calc(100dvh - 20px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
         border-radius: var(--se-radius-lg) !important;
+        overflow: hidden !important;
+    }
+    #st-direct-event-root .se-panel-content,
+    #st-direct-event-root .se-settings-body,
+    #st-direct-event-root .se-events-body,
+    #st-direct-event-root .se-presets-body,
+    #st-direct-event-root .se-api-log-list,
+    #st-direct-event-root .se-sub-body {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
     }
     .se-theme-grid {
         grid-template-columns: 1fr 1fr;
@@ -2638,6 +2661,11 @@
     background: var(--se-bg-panel) !important;
     border: 1px solid var(--se-border) !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, .3) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent;
+    cursor: grab;
 }
 #st-direct-event-root .se-fab img {
     width: 42px;
@@ -2942,6 +2970,11 @@
     background: var(--se-bg-panel);
     box-shadow: var(--se-shadow);
     animation: none;
+    padding: 0 !important;
+    margin: 0 !important;
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent;
+    cursor: grab;
 }
 #st-direct-event-root .se-fab img {
     width: 28px;
@@ -3514,9 +3547,9 @@
     }
 
     @media (max-width: 540px) {
-        #st-direct-event-root .se-panel { width: 320px; }
-        #st-direct-event-root .se-panel-header { padding: 16px; }
-        #st-direct-event-root .se-panel-content { padding: 12px; gap: 8px; }
+        #st-direct-event-root .se-panel { width: auto; max-width: min(420px, calc(100vw - 24px)); }
+        #st-direct-event-root .se-panel-header { padding: 14px; }
+        #st-direct-event-root .se-panel-content { padding: 10px; gap: 8px; }
         #st-direct-event-root .se-stage-engine-actions .se-cap-btn { flex: 1; margin-left: 0 !important; }
     }
 

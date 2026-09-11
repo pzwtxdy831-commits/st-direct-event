@@ -314,7 +314,6 @@
 
     let root = null;
     let initialized = false;
-    let suppressClick = false;
     const revealedIds = new Set();
     const apiLogs = [];
     let lastRawModelOutput = null;
@@ -579,7 +578,7 @@
         root = document.createElement('div');
         root.id = ROOT_ID;
         root.innerHTML = `
-            <div class="se-fab" data-action="toggle" role="button" tabindex="0" aria-label="打开剧情导演" title="剧情导演 (分轮多回合引擎)">
+            <button type="button" class="se-fab" data-action="toggle" aria-label="打开剧情导演" title="剧情导演 (分轮多回合引擎)">
                 <img src="${ICON_SRC}" alt="剧情导演" onerror="this.style.display='none'; const fb = this.nextElementSibling; if(fb) fb.style.display='block';" />
                 <svg class="se-fab-fallback" style="display:none; width:34px; height:34px;" viewBox="0 0 64 64" fill="none">
                     <!-- Director Baton -->
@@ -598,7 +597,7 @@
                         <path d="M37 18.5 L32.5 26" stroke="#38bdf8" stroke-width="2.8" stroke-linecap="round"/>
                     </g>
                 </svg>
-            </div>
+            </button>
 
             <div class="se-panel" id="se-panel" style="display:none">
                 <div class="se-panel-header">
@@ -1071,12 +1070,21 @@
         const fab = root.querySelector('.se-fab');
         if (!panel || !fab) return;
 
-        const fabRect = fab.getBoundingClientRect();
         const vw = window.innerWidth || document.documentElement.clientWidth || 360;
         const vh = window.innerHeight || document.documentElement.clientHeight || 640;
 
-        const panelWidth = Math.min(panel.offsetWidth || 160, vw - 24);
-        const panelHeight = panel.offsetHeight || 280;
+        // 移动端手机屏幕 (vw <= 768)：采用与世界引擎一致的顶置自适应布局，清除绝对内联定位交由 CSS 接管
+        if (vw <= 768) {
+            panel.style.top = '';
+            panel.style.left = '';
+            panel.style.right = '';
+            panel.style.bottom = '';
+            return;
+        }
+
+        const fabRect = fab.getBoundingClientRect();
+        const panelWidth = Math.min(panel.offsetWidth || 344, vw - 24);
+        const panelHeight = Math.min(panel.offsetHeight || 500, vh - 40);
 
         let top, left;
         // 如果悬浮球在屏幕下半部，面板放上方；否则放下方
@@ -1849,15 +1857,22 @@
                 s.fabX = parseFloat(fab.style.left) || 0;
                 s.fabY = parseFloat(fab.style.top) || 0;
                 persistSettings(s);
-                suppressClick = true;
-                setTimeout(() => { suppressClick = false; }, 0);
             }
         };
 
         fab.addEventListener('mousedown', onDown);
         fab.addEventListener('touchstart', onDown, { passive: true });
 
-        // 普通点击交给根节点统一处理；拖动结束后的合成 click 会被短暂抑制。
+        // 捕获阶段拦截：若产生了真实拖拽 (moved=true)，在最外层直接阻止并销毁本次 click，避免误开/误收面板
+        fab.addEventListener('click', (e) => {
+            if (moved) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                moved = false;
+                return;
+            }
+        }, true);
     }
 
     function onRootClick(e) {
@@ -2040,7 +2055,6 @@
         const subModal = root.querySelector('#se-sub-modal');
 
         if (action === 'toggle') {
-            if (suppressClick) return;
             togglePanel();
             return;
         }
