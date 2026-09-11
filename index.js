@@ -1011,19 +1011,15 @@
             }
         });
 
-        // 点击或轻触外部空白区域自动关闭悬浮主面板
-        const handleOutsideDismiss = (e) => {
-            if (!root || suppressClick) return;
-            const touch = e.changedTouches ? e.changedTouches[0] : null;
-            const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : e.target;
-            if (!target || root.contains(target)) return;
+        // 点击外部空白区域自动关闭悬浮主面板
+        document.addEventListener('click', (e) => {
+            if (!root) return;
+            if (root.contains(e.target)) return;
             const panel = root.querySelector('#se-panel');
             if (panel && panel.style.display !== 'none') {
                 panel.style.display = 'none';
             }
-        };
-        document.addEventListener('click', handleOutsideDismiss);
-        document.addEventListener('touchend', handleOutsideDismiss, { passive: true });
+        });
     }
 
     let fabObserver = null;
@@ -1052,31 +1048,16 @@
         const presets = root.querySelector('#se-presets');
         const apiLogPanel = root.querySelector('#se-api-log');
         const subModal = root.querySelector('#se-sub-modal');
-        const pvModal = root.querySelector('#se-prompt-viewer-modal');
-        const stageModal = root.querySelector('#se-stage-modal');
-        const wiModal = root.querySelector('#se-world-info-modal');
         if (!panel) return;
 
-        const anyOpen = (panel.style.display !== 'none') ||
-            (settings && settings.style.display !== 'none') ||
-            (events && events.style.display !== 'none') ||
-            (presets && presets.style.display !== 'none') ||
-            (apiLogPanel && apiLogPanel.style.display !== 'none') ||
-            (subModal && subModal.style.display !== 'none') ||
-            (pvModal && pvModal.style.display !== 'none') ||
-            (stageModal && stageModal.style.display !== 'none') ||
-            (wiModal && wiModal.style.display !== 'none');
-
-        if (anyOpen) {
+        const isOpen = panel.style.display !== 'none';
+        if (isOpen) {
             panel.style.display = 'none';
             if (settings) settings.style.display = 'none';
             if (events) events.style.display = 'none';
             if (presets) presets.style.display = 'none';
             if (apiLogPanel) apiLogPanel.style.display = 'none';
             if (subModal) subModal.style.display = 'none';
-            if (pvModal) pvModal.style.display = 'none';
-            if (stageModal) stageModal.style.display = 'none';
-            if (wiModal) wiModal.style.display = 'none';
         } else {
             panel.style.display = 'flex';
             updateBadges();
@@ -1090,19 +1071,10 @@
         const fab = root.querySelector('.se-fab');
         if (!panel || !fab) return;
 
+        const fabRect = fab.getBoundingClientRect();
         const vw = window.innerWidth || document.documentElement.clientWidth || 360;
         const vh = window.innerHeight || document.documentElement.clientHeight || 640;
 
-        // 移动端宽度 (vw <= 768) 由 CSS 移动端底部自适应规则接管，清除可能残留的内联绝对坐标
-        if (vw <= 768) {
-            panel.style.top = '';
-            panel.style.left = '';
-            panel.style.right = '';
-            panel.style.bottom = '';
-            return;
-        }
-
-        const fabRect = fab.getBoundingClientRect();
         const panelWidth = Math.min(panel.offsetWidth || 160, vw - 24);
         const panelHeight = panel.offsetHeight || 280;
 
@@ -1815,22 +1787,19 @@
         let moved = false;
         let sx = 0, sy = 0;
         let ox = 0, oy = 0;
-        let startTime = 0;
-        let isTouchDevice = false;
 
         const onDown = (e) => {
             if (e.button !== undefined && e.button !== 0) return;
-            isTouchDevice = !!(e.touches && e.touches.length > 0);
             const pt = e.touches ? e.touches[0] : e;
             if (!pt) return;
             dragging = true;
             moved = false;
             sx = pt.clientX;
             sy = pt.clientY;
-            startTime = Date.now();
             const rect = fab.getBoundingClientRect();
             ox = rect.left;
             oy = rect.top;
+            fab.classList.add('se-fab-dragging');
 
             document.addEventListener('mousemove', onMove, { passive: false });
             document.addEventListener('mouseup', onUp);
@@ -1845,15 +1814,13 @@
             if (!pt) return;
             const dx = pt.clientX - sx;
             const dy = pt.clientY - sy;
-            const dist = Math.hypot(dx, dy);
 
-            // 移动端轻按通常伴随 2~10px 手指微颤，位移大于 14px 时才判定为真实拖拽
-            if (dist > 14) {
+            // 触屏轻触通常有 2~6px 微颤，大于 8px 才视为真实拖拽
+            if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
                 moved = true;
             }
 
             if (moved) {
-                fab.classList.add('se-fab-dragging');
                 if (e.cancelable) e.preventDefault();
                 const vw = window.innerWidth || document.documentElement.clientWidth || 360;
                 const vh = window.innerHeight || document.documentElement.clientHeight || 640;
@@ -1877,28 +1844,20 @@
             document.removeEventListener('touchend', onUp);
             document.removeEventListener('touchcancel', onUp);
 
-            const duration = Date.now() - startTime;
-
             if (moved) {
-                // 真实拖拽结束：保存位置，抑制随后的合成 click
                 const s = getSettings();
                 s.fabX = parseFloat(fab.style.left) || 0;
                 s.fabY = parseFloat(fab.style.top) || 0;
                 persistSettings(s);
                 suppressClick = true;
-                setTimeout(() => { suppressClick = false; }, 400);
-            } else {
-                // 没有发生有效拖拽，说明是移动端轻触(TAP)或桌面常规点击
-                if (isTouchDevice || duration < 350) {
-                    suppressClick = true;
-                    togglePanel();
-                    setTimeout(() => { suppressClick = false; }, 400);
-                }
+                setTimeout(() => { suppressClick = false; }, 0);
             }
         };
 
         fab.addEventListener('mousedown', onDown);
         fab.addEventListener('touchstart', onDown, { passive: true });
+
+        // 普通点击交给根节点统一处理；拖动结束后的合成 click 会被短暂抑制。
     }
 
     function onRootClick(e) {
