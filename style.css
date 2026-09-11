@@ -1730,13 +1730,8 @@
 /* ---------- 12. 移动端自适应 (Mobile Adaptations) ---------- */
 
 @media (max-width: 768px) {
-    #st-direct-event-root .se-panel,
-    #st-direct-event-root .se-settings,
-    #st-direct-event-root .se-events,
-    #st-direct-event-root .se-presets,
-    #st-direct-event-root .se-api-log,
-    #st-direct-event-root .se-sub-modal,
-    #st-direct-event-root .se-stage-modal {
+    /* 一级主面板：固定头部，内容区内部独立滚动 */
+    #st-direct-event-root .se-panel {
         top: calc(10px + env(safe-area-inset-top, 0px)) !important;
         bottom: auto !important;
         right: 12px !important;
@@ -1750,16 +1745,55 @@
         border-radius: var(--se-radius-lg) !important;
         overflow: hidden !important;
     }
-    #st-direct-event-root .se-panel-content,
-    #st-direct-event-root .se-settings-body,
-    #st-direct-event-root .se-events-body,
-    #st-direct-event-root .se-presets-body,
-    #st-direct-event-root .se-api-log-list,
-    #st-direct-event-root .se-sub-body {
+    #st-direct-event-root .se-panel-content {
         flex: 1 1 auto !important;
         min-height: 0 !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* 所有二级弹窗（细分设置、全局设置、事件历史、预设工坊、API日志、阶段大纲等）：
+       整体弹窗作为主滚动容器，支持流畅触屏顺滑滑动到底部，彻底解决滑不下去的问题 */
+    #st-direct-event-root :is(.se-settings, .se-events, .se-presets, .se-api-log, .se-sub-modal, .se-stage-modal) {
+        top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+        bottom: auto !important;
+        right: 12px !important;
+        left: 12px !important;
+        margin: 0 auto !important;
+        width: auto !important;
+        max-width: min(460px, calc(100vw - 24px)) !important;
+        height: auto !important;
+        max-height: calc(100vh - 20px) !important;
+        max-height: calc(100dvh - 20px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+        border-radius: var(--se-radius-lg) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain !important;
+        touch-action: pan-y !important;
+        padding: 14px !important;
+        padding-bottom: 30px !important;
+    }
+
+    /* 弹窗内部子容器全部解除局部滚动锁定，跟随外部弹窗整体滚动，消除嵌套滚动冲突 */
+    #st-direct-event-root :is(.se-sub-body, .se-settings-body, .se-events-body, .se-presets-body, .se-api-log-list, .se-stage-modal-body) {
+        overflow: visible !important;
+        height: auto !important;
+        min-height: 0 !important;
+        flex: none !important;
+    }
+
+    /* 弹窗顶部栏吸顶并带有毛玻璃背景，滑动时关闭按钮与标题始终置顶可见 */
+    #st-direct-event-root .se-modal-header {
+        position: sticky !important;
+        top: -14px !important;
+        margin: -14px -14px 12px -14px !important;
+        padding: 14px 14px 10px 14px !important;
+        background: var(--se-bg-panel) !important;
+        z-index: 30 !important;
+        border-bottom: 1px solid var(--se-border-subtle) !important;
+        backdrop-filter: blur(24px) saturate(160%) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
     }
     .se-theme-grid {
         grid-template-columns: 1fr 1fr;

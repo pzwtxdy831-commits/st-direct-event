@@ -1169,7 +1169,10 @@
         currentSubEventKey = eventKey;
         renderSubModal(eventKey);
         const subModal = root.querySelector('#se-sub-modal');
-        if (subModal) subModal.style.display = 'block';
+        if (subModal) {
+            subModal.style.display = 'block';
+            subModal.scrollTop = 0;
+        }
         const panel = root.querySelector('#se-panel');
         if (panel) panel.style.display = 'none';
     }
@@ -2084,6 +2087,7 @@
         if (action === 'open-settings') {
             fillSettingsForm();
             settings.style.display = 'block';
+            settings.scrollTop = 0;
             panel.style.display = 'none';
             events.style.display = 'none';
             presets.style.display = 'none';
@@ -2105,6 +2109,7 @@
         if (action === 'open-events') {
             renderEventList();
             events.style.display = 'block';
+            events.scrollTop = 0;
             panel.style.display = 'none';
             settings.style.display = 'none';
             presets.style.display = 'none';
@@ -2121,6 +2126,7 @@
         if (action === 'open-presets') {
             renderPresets();
             presets.style.display = 'block';
+            presets.scrollTop = 0;
             panel.style.display = 'none';
             settings.style.display = 'none';
             events.style.display = 'none';
@@ -2147,6 +2153,7 @@
         if (action === 'open-api-log') {
             renderApiLogs();
             apiLogPanel.style.display = 'block';
+            apiLogPanel.scrollTop = 0;
             panel.style.display = 'none';
             settings.style.display = 'none';
             events.style.display = 'none';
