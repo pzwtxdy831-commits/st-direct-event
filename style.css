@@ -3071,11 +3071,15 @@
     max-height: 100% !important;
     object-fit: cover !important;
     border-radius: inherit !important;
-    display: block !important;
+    display: block;
     filter: none;
     animation: none;
     transform: none;
     transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#st-direct-event-root .se-fab img[style*="display: none"],
+#st-direct-event-root .se-fab img[style*="display:none"] {
+    display: none !important;
 }
 #st-direct-event-root .se-fab:hover {
     background: var(--se-bg-hover);
