@@ -3059,6 +3059,10 @@
     outline: none !important;
     -webkit-tap-highlight-color: transparent;
     cursor: grab;
+    overflow: hidden !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 #st-direct-event-root .se-fab img {
     width: 28px;
@@ -3066,10 +3070,34 @@
     filter: none;
     animation: none;
     transform: none;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 #st-direct-event-root .se-fab:hover {
     background: var(--se-bg-hover);
     border-color: var(--se-accent);
+}
+
+/* 当用户设置了自定义图片 URL 时，自适应撑满整个悬浮球 */
+#st-direct-event-root .se-fab.se-fab-custom-img,
+#st-direct-event-root .se-fab:has(img:not([src*="director.svg"])) {
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+
+#st-direct-event-root .se-fab.se-fab-custom-img img,
+#st-direct-event-root .se-fab img:not([src*="director.svg"]) {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: cover !important;
+    border-radius: inherit !important;
+    display: block !important;
+}
+
+#st-direct-event-root .se-fab.se-fab-custom-img:hover img,
+#st-direct-event-root .se-fab:hover img:not([src*="director.svg"]) {
+    transform: scale(1.08);
 }
 
 /* 二级菜单（细分设置弹窗、全局设置、预设等）照着一级菜单重塑并融入 7 大主题 */

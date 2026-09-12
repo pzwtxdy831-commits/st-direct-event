@@ -1976,7 +1976,14 @@
         if (img) {
             img.style.display = '';
             if (img.nextElementSibling) img.nextElementSibling.style.display = 'none';
-            img.src = s.fabIconUrl || ICON_SRC;
+            const customUrl = (s.fabIconUrl || '').trim();
+            if (customUrl) {
+                img.src = customUrl;
+                fab.classList.add('se-fab-custom-img');
+            } else {
+                img.src = ICON_SRC;
+                fab.classList.remove('se-fab-custom-img');
+            }
         }
 
         const vw = window.innerWidth || document.documentElement.clientWidth || 360;
