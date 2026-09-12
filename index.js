@@ -117,6 +117,8 @@
         fabIconUrl: '',
         fabX: null,
         fabY: null,
+        panelX: null,
+        panelY: null,
         hideFab: false,
         theme: 'ocean',
         enableWorldInfo: true,
@@ -1146,6 +1148,7 @@
         if (fabEl) {
             makeFabDraggable(fabEl);
         }
+        enableDesktopWindowDragging(root);
 
         try {
             applyFabSettings();
@@ -1159,6 +1162,15 @@
 
         window.addEventListener('resize', () => {
             try {
+                if (isMobileView()) {
+                    root?.querySelectorAll('.se-panel, .se-settings, .se-events, .se-presets, .se-api-log, .se-sub-modal, .se-stage-modal, .se-prompt-viewer-modal, .se-world-info-modal').forEach(el => {
+                        el.style.left = '';
+                        el.style.top = '';
+                        el.style.right = '';
+                        el.style.bottom = '';
+                        el.style.transform = '';
+                    });
+                }
                 applyFabSettings();
                 adjustPanelPosition();
             } catch (e) {
@@ -1173,6 +1185,15 @@
             if (e.target.closest && e.target.closest('#extensionsMenu, #extensionsMenuButton, #' + WAND_MENU_ITEM_ID + ', .extension_container, [id*="extensionsMenu"], .se-wand-item, .se-wand-container, #leftSendForm, #se-drawer-entry')) return;
             const panel = root.querySelector('#se-panel');
             if (panel && panel.style.display !== 'none') {
+                if (!isMobileView()) {
+                    const rect = panel.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        const s = getSettings();
+                        s.panelX = Math.round(rect.left);
+                        s.panelY = Math.round(rect.top);
+                        persistSettings(s);
+                    }
+                }
                 panel.style.display = 'none';
             }
             const stageModal = root.querySelector('#se-stage-modal');
@@ -1212,6 +1233,15 @@
 
         const isOpen = panel.style.display !== 'none';
         if (isOpen) {
+            if (!isMobileView()) {
+                const rect = panel.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                    const s = getSettings();
+                    s.panelX = Math.round(rect.left);
+                    s.panelY = Math.round(rect.top);
+                    persistSettings(s);
+                }
+            }
             panel.style.display = 'none';
             if (settings) settings.style.display = 'none';
             if (events) events.style.display = 'none';
@@ -1229,13 +1259,13 @@
         if (!root) return;
         const panel = root.querySelector('#se-panel');
         const fab = root.querySelector('.se-fab');
-        if (!panel || !fab) return;
+        if (!panel) return;
 
         const vw = window.innerWidth || document.documentElement.clientWidth || 360;
         const vh = window.innerHeight || document.documentElement.clientHeight || 640;
 
-        // 移动端手机屏幕 (vw <= 768)：采用与世界引擎一致的顶置自适应布局，清除绝对内联定位交由 CSS 接管
-        if (vw <= 768) {
+        // 移动端手机屏幕 (vw <= 768 或 isMobileView())：采用顶置自适应布局，清除绝对内联定位交由 CSS 接管
+        if (vw <= 768 || isMobileView()) {
             panel.style.top = '';
             panel.style.left = '';
             panel.style.right = '';
@@ -1244,6 +1274,24 @@
         }
 
         const s = getSettings();
+        const panelWidth = Math.min(panel.offsetWidth || 344, vw - 24);
+        const panelHeight = Math.min(panel.offsetHeight || 500, vh - 40);
+
+        // 电脑版：魔法棒或悬浮球打开时，默认优先使用上次关闭或拖拽保存的位置
+        if (s.panelX != null && s.panelY != null) {
+            const savedX = Number(s.panelX);
+            const savedY = Number(s.panelY);
+            if (!isNaN(savedX) && !isNaN(savedY)) {
+                const safeLeft = Math.max(10, Math.min(savedX, vw - panelWidth - 10));
+                const safeTop = Math.max(15, Math.min(savedY, vh - 50));
+                panel.style.top = safeTop + 'px';
+                panel.style.left = safeLeft + 'px';
+                panel.style.right = 'auto';
+                panel.style.bottom = 'auto';
+                return;
+            }
+        }
+
         if (s.hideFab || !fab || fab.style.display === 'none') {
             panel.style.top = '60px';
             panel.style.right = '24px';
@@ -1253,9 +1301,6 @@
         }
 
         const fabRect = fab.getBoundingClientRect();
-        const panelWidth = Math.min(panel.offsetWidth || 344, vw - 24);
-        const panelHeight = Math.min(panel.offsetHeight || 500, vh - 40);
-
         let top, left;
         // 如果悬浮球在屏幕下半部，面板放上方；否则放下方
         if (fabRect.top > panelHeight + 15) {
@@ -2053,6 +2098,103 @@
                 return;
             }
         }, true);
+    }
+
+    let highestZIndex = 10010;
+
+    function isMobileView() {
+        const isMobileUA = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+            || Boolean(navigator.userAgentData?.mobile);
+        const isSmallScreen = window.innerWidth <= 768;
+        return isMobileUA || isSmallScreen;
+    }
+
+    function bringWindowToFront(el) {
+        if (!el) return;
+        highestZIndex += 1;
+        el.style.zIndex = highestZIndex;
+    }
+
+    function enableDesktopWindowDragging(container) {
+        if (!container) return;
+
+        container.addEventListener('mousedown', (e) => {
+            // 手机版完全不启用拖拽，保持原生触屏与自适应响应式布局
+            if (isMobileView()) return;
+            if (e.button !== 0) return;
+
+            const target = e.target;
+            const windowEl = target.closest('.se-panel, .se-settings, .se-events, .se-presets, .se-api-log, .se-sub-modal, .se-stage-modal, .se-prompt-viewer-modal, .se-world-info-modal');
+            if (windowEl) {
+                bringWindowToFront(windowEl);
+            }
+
+            // 检查是否点击在头部拖拽把手区域
+            const header = target.closest('.se-panel-header, .se-modal-header');
+            if (!header || !container.contains(header)) return;
+
+            // 排除头部中的按钮、输入框、下拉选择器等交互控件
+            if (target.closest('button, input, select, textarea, a, [role="button"]')) return;
+
+            if (!windowEl) return;
+
+            e.preventDefault();
+
+            const rect = windowEl.getBoundingClientRect();
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const originLeft = rect.left;
+            const originTop = rect.top;
+
+            // 转换为绝对定位坐标并清除 transform
+            windowEl.style.left = originLeft + 'px';
+            windowEl.style.top = originTop + 'px';
+            windowEl.style.right = 'auto';
+            windowEl.style.bottom = 'auto';
+            windowEl.style.transform = 'none';
+
+            let hasMoved = false;
+
+            const onMouseMove = (moveEvent) => {
+                const dx = moveEvent.clientX - startX;
+                const dy = moveEvent.clientY - startY;
+
+                if (!hasMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+                    hasMoved = true;
+                    document.body.style.userSelect = 'none';
+                }
+
+                if (!hasMoved) return;
+
+                const vw = window.innerWidth || document.documentElement.clientWidth || 1024;
+                const vh = window.innerHeight || document.documentElement.clientHeight || 768;
+                const winW = windowEl.offsetWidth || 340;
+
+                // 限制在视口边界内，保证标题栏始终可见且可拖拽
+                const newLeft = Math.max(0, Math.min(originLeft + dx, vw - Math.min(winW, 100)));
+                const newTop = Math.max(0, Math.min(originTop + dy, vh - 40));
+
+                windowEl.style.left = newLeft + 'px';
+                windowEl.style.top = newTop + 'px';
+            };
+
+            const onMouseUp = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                document.body.style.userSelect = '';
+
+                if (hasMoved && windowEl.id === 'se-panel') {
+                    const latestRect = windowEl.getBoundingClientRect();
+                    const s = getSettings();
+                    s.panelX = Math.round(latestRect.left);
+                    s.panelY = Math.round(latestRect.top);
+                    persistSettings(s);
+                }
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
     }
 
     function onRootClick(e) {

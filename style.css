@@ -4128,3 +4128,19 @@
     border-color: #38bdf8;
     color: #ffffff;
 }
+
+/* ---------- 电脑端自由拖拽窗口把手样式 (Desktop Window Dragging) ---------- */
+@media (min-width: 769px) {
+    #st-direct-event-root .se-panel-header,
+    #st-direct-event-root .se-modal-header {
+        cursor: grab;
+        user-select: none;
+    }
+    #st-direct-event-root .se-panel-header:active,
+    #st-direct-event-root .se-modal-header:active {
+        cursor: grabbing;
+    }
+    #st-direct-event-root :is(.se-panel-header, .se-modal-header) :is(button, input, select, textarea, a, [role="button"]) {
+        cursor: pointer;
+    }
+}
