@@ -523,48 +523,146 @@
 
     const WAND_MENU_ITEM_ID = 'se-wand-menu-item';
 
+    function findExtensionsMenu() {
+        const candidates = [
+            '#extensionsMenu',
+            '#extensions_menu',
+            '.extensions_menu',
+            '#rm_button_panel_extensions_menu',
+            '#extensionsMenuButton + div',
+            '[id*="extensionsMenu"]',
+        ];
+        for (const sel of candidates) {
+            const el = document.querySelector(sel);
+            if (el) return el;
+        }
+        const c = document.querySelector('.extension_container');
+        if (c && c.parentElement) return c.parentElement;
+        return null;
+    }
+
     function injectWandMenuButton() {
         const tryInject = () => {
-            const menu = document.getElementById('extensionsMenu');
+            const menu = findExtensionsMenu();
             if (!menu) return false;
             if (document.getElementById(WAND_MENU_ITEM_ID)) return true;
 
+            const container = document.createElement('div');
+            container.className = 'extension_container se-wand-container';
+
             const item = document.createElement('div');
-            item.className = 'extension_container interactable';
+            item.id = WAND_MENU_ITEM_ID;
+            item.className = 'list-group-item flex-container flexGap5 interactable se-wand-item';
             item.tabIndex = 0;
+            item.setAttribute('role', 'button');
+            item.setAttribute('title', '剧情导演');
             item.innerHTML = `
-                <a id="${WAND_MENU_ITEM_ID}" class="list-group-item" href="#" title="剧情导演">
-                    <i class="fa-solid fa-clapperboard"></i>
-                    <span>剧情导演</span>
-                </a>
+                <i class="fa-solid fa-clapperboard extensionsMenuExtensionButton"></i>
+                <span class="se-wand-label">剧情导演</span>
             `;
 
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+            let handled = false;
+            const triggerOpen = (e) => {
+                if (handled) return;
+                handled = true;
+                setTimeout(() => { handled = false; }, 350);
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+                }
                 togglePanel();
                 if (window.$ && $('#extensionsMenu').length) {
                     $('#extensionsMenu').hide();
-                } else {
+                } else if (menu) {
                     menu.style.display = 'none';
+                }
+            };
+
+            item.addEventListener('pointerup', (e) => {
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                triggerOpen(e);
+            });
+            item.addEventListener('click', triggerOpen);
+            item.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    triggerOpen(e);
                 }
             });
 
-            menu.appendChild(item);
+            container.appendChild(item);
+            menu.appendChild(container);
             return true;
         };
 
-        if (tryInject()) return;
-        const timer = setInterval(() => {
-            if (tryInject()) clearInterval(timer);
-        }, 500);
+        tryInject();
+        // 持续保持挂载（每秒检查一次，极度轻量，杜绝聊天或卡片切换后丢失）
+        setInterval(tryInject, 1000);
 
-        // 监听魔杖按钮点击事件与 DOM 变动，确保随时重新挂载
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('#extensionsMenuButton, .extensionsMenuExtensionButton')) {
-                setTimeout(tryInject, 50);
+        // 监听魔杖按钮各类交互事件，触发即时快速挂载
+        const onWandInteract = (e) => {
+            if (e.target.closest('#extensionsMenuButton, .extensionsMenuExtensionButton, #leftSendForm')) {
+                setTimeout(tryInject, 20);
+                setTimeout(tryInject, 100);
             }
-        });
+        };
+        document.addEventListener('pointerdown', onWandInteract, true);
+        document.addEventListener('click', onWandInteract, true);
+    }
+
+    function installExtensionsDrawerEntry() {
+        const tryInstallDrawer = () => {
+            if (document.getElementById('se-drawer-entry')) return true;
+            const host = document.querySelector('#extensions_settings2, #extensions_settings');
+            if (!host) return false;
+
+            const entry = document.createElement('div');
+            entry.id = 'se-drawer-entry';
+            entry.className = 'se-drawer-entry';
+            entry.innerHTML = `
+                <div class="inline-drawer">
+                    <div class="inline-drawer-toggle inline-drawer-header">
+                        <b><i class="fa-solid fa-clapperboard" style="color:var(--se-accent, #38bdf8); margin-right:6px;"></i>剧情导演</b>
+                        <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+                    </div>
+                    <div class="inline-drawer-content">
+                        <p style="font-size:12px; color:var(--SmartThemeQuoteColor, #94a3b8); margin:6px 0 10px 0;">
+                            独立的副模型剧情事件导演。支持多回合博弈、暗箱档案与自适应破限。
+                        </p>
+                        <button id="se-drawer-open-btn" class="menu_button" type="button" style="width:100%;">
+                            打开剧情导演面板
+                        </button>
+                    </div>
+                </div>
+            `;
+            entry.querySelector('#se-drawer-open-btn')?.addEventListener('click', () => {
+                togglePanel();
+            });
+            host.appendChild(entry);
+            return true;
+        };
+
+        if (tryInstallDrawer()) return;
+        const drawerTimer = setInterval(() => {
+            if (tryInstallDrawer()) clearInterval(drawerTimer);
+        }, 1000);
+    }
+
+    function setupSlashCommand() {
+        try {
+            const ctx = SillyTavern.getContext?.() || null;
+            const SlashCommandParser = ctx?.SlashCommandParser || window.SlashCommandParser;
+            const SlashCommand = ctx?.SlashCommand || window.SlashCommand;
+            if (!SlashCommandParser || !SlashCommand) return;
+            SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+                name: 'direct',
+                aliases: ['st-direct', 'director'],
+                helpString: '打开/关闭剧情导演面板。',
+                callback: async () => { togglePanel(); return ''; },
+            }));
+        } catch (e) {
+            console.debug('[ST Direct] 斜杠命令注册略过', e);
+        }
     }
 
     function init() {
@@ -575,6 +673,8 @@
             bindSTEvents();
             updateFloatingCapsule();
             injectWandMenuButton();
+            installExtensionsDrawerEntry();
+            setupSlashCommand();
             console.log('[ST Direct] 剧情导演 v0.5.0 已启动（独立系统纸条 + 分轮暗箱）');
             if (window.toastr) {
                 toastr.success('剧情导演 v0.5.0 已加载（独立系统纸条与分轮暗箱已就绪）', '', { timeOut: 2500 });
@@ -1070,7 +1170,7 @@
         document.addEventListener('click', (e) => {
             if (!root) return;
             if (root.contains(e.target)) return;
-            if (e.target.closest && e.target.closest('#' + WAND_MENU_ITEM_ID)) return;
+            if (e.target.closest && e.target.closest('#extensionsMenu, #extensionsMenuButton, #' + WAND_MENU_ITEM_ID + ', .extension_container, [id*="extensionsMenu"], .se-wand-item, .se-wand-container, #leftSendForm, #se-drawer-entry')) return;
             const panel = root.querySelector('#se-panel');
             if (panel && panel.style.display !== 'none') {
                 panel.style.display = 'none';
@@ -2137,6 +2237,11 @@
 
         if (action === 'open-sub') {
             const eventKey = el.dataset.event;
+            const subModal = root?.querySelector('#se-sub-modal');
+            if (subModal && subModal.style.display !== 'none' && currentSubEventKey === eventKey) {
+                closeSubModal();
+                return;
+            }
             if (eventKey) openSubModal(eventKey);
             return;
         }
@@ -2158,14 +2263,21 @@
         }
 
         if (action === 'open-settings') {
+            if (settings && settings.style.display !== 'none') {
+                settings.style.display = 'none';
+                if (panel) panel.style.display = 'flex';
+                return;
+            }
             fillSettingsForm();
             settings.style.display = 'block';
             settings.scrollTop = 0;
-            panel.style.display = 'none';
-            events.style.display = 'none';
-            presets.style.display = 'none';
-            apiLogPanel.style.display = 'none';
+            if (panel) panel.style.display = 'none';
+            if (events) events.style.display = 'none';
+            if (presets) presets.style.display = 'none';
+            if (apiLogPanel) apiLogPanel.style.display = 'none';
             if (subModal) subModal.style.display = 'none';
+            const stageModal = root?.querySelector('#se-stage-modal');
+            if (stageModal) stageModal.style.display = 'none';
             return;
         }
 
@@ -2175,41 +2287,57 @@
                 applyFabSettings();
             } catch (err) { console.warn('[ST Direct] 自动保存设置失败:', err); }
             settings.style.display = 'none';
-            panel.style.display = 'flex';
+            if (panel) panel.style.display = 'flex';
             return;
         }
 
         if (action === 'open-events') {
+            if (events && events.style.display !== 'none') {
+                events.style.display = 'none';
+                if (panel) panel.style.display = 'flex';
+                return;
+            }
             renderEventList();
             events.style.display = 'block';
             events.scrollTop = 0;
-            panel.style.display = 'none';
-            settings.style.display = 'none';
-            presets.style.display = 'none';
-            apiLogPanel.style.display = 'none';
+            if (panel) panel.style.display = 'none';
+            if (settings) settings.style.display = 'none';
+            if (presets) presets.style.display = 'none';
+            if (apiLogPanel) apiLogPanel.style.display = 'none';
+            if (subModal) subModal.style.display = 'none';
+            const stageModal = root?.querySelector('#se-stage-modal');
+            if (stageModal) stageModal.style.display = 'none';
             return;
         }
 
         if (action === 'close-events') {
             events.style.display = 'none';
-            panel.style.display = 'flex';
+            if (panel) panel.style.display = 'flex';
             return;
         }
 
         if (action === 'open-presets') {
+            if (presets && presets.style.display !== 'none') {
+                presets.style.display = 'none';
+                if (panel) panel.style.display = 'flex';
+                return;
+            }
             renderPresets();
             presets.style.display = 'block';
             presets.scrollTop = 0;
-            panel.style.display = 'none';
-            settings.style.display = 'none';
-            events.style.display = 'none';
-            apiLogPanel.style.display = 'none';
+            if (panel) panel.style.display = 'none';
+            if (settings) settings.style.display = 'none';
+            if (events) events.style.display = 'none';
+            if (apiLogPanel) apiLogPanel.style.display = 'none';
+            if (subModal) subModal.style.display = 'none';
+            const stageModal = root?.querySelector('#se-stage-modal');
+            if (stageModal) stageModal.style.display = 'none';
             return;
         }
 
         if (action === 'close-presets') {
             presets.style.display = 'none';
-            panel.style.display = 'flex';
+            if (panel) panel.style.display = 'flex';
             return;
         }
 
@@ -2224,19 +2352,27 @@
         }
 
         if (action === 'open-api-log') {
+            if (apiLogPanel && apiLogPanel.style.display !== 'none') {
+                apiLogPanel.style.display = 'none';
+                if (panel) panel.style.display = 'flex';
+                return;
+            }
             renderApiLogs();
             apiLogPanel.style.display = 'block';
             apiLogPanel.scrollTop = 0;
-            panel.style.display = 'none';
-            settings.style.display = 'none';
-            events.style.display = 'none';
-            presets.style.display = 'none';
+            if (panel) panel.style.display = 'none';
+            if (settings) settings.style.display = 'none';
+            if (events) events.style.display = 'none';
+            if (presets) presets.style.display = 'none';
+            if (subModal) subModal.style.display = 'none';
+            const stageModal = root?.querySelector('#se-stage-modal');
+            if (stageModal) stageModal.style.display = 'none';
             return;
         }
 
         if (action === 'close-api-log') {
             apiLogPanel.style.display = 'none';
-            panel.style.display = 'flex';
+            if (panel) panel.style.display = 'flex';
             return;
         }
 
@@ -2408,10 +2544,17 @@
         if (action === 'close-stage-modal') {
             const m = root?.querySelector('#se-stage-modal');
             if (m) m.style.display = 'none';
+            if (panel) panel.style.display = 'flex';
             return;
         }
 
         if (action === 'open-prompt-viewer') {
+            const m = root?.querySelector('#se-prompt-viewer-modal');
+            if (m && m.style.display !== 'none') {
+                m.style.display = 'none';
+                if (panel) panel.style.display = 'flex';
+                return;
+            }
             openPromptViewerModal();
             return;
         }
@@ -2419,15 +2562,25 @@
         if (action === 'close-prompt-viewer') {
             const m = root?.querySelector('#se-prompt-viewer-modal');
             if (m) m.style.display = 'none';
+            if (panel) panel.style.display = 'flex';
             return;
         }
 
         if (action === 'open-world-info-modal') {
+            const m = root?.querySelector('#se-world-info-modal');
+            if (m && m.style.display !== 'none') {
+                m.style.display = 'none';
+                if (panel) panel.style.display = 'flex';
+                return;
+            }
             openWorldInfoModal();
             return;
         }
 
         if (action === 'close-world-info-modal') {
+            const m = root?.querySelector('#se-world-info-modal');
+            if (m) m.style.display = 'none';
+            if (panel) panel.style.display = 'flex';
             closeWorldInfoModal();
             return;
         }
@@ -2528,6 +2681,12 @@
         }
 
         if (action === 'open-last-raw-output') {
+            const m = root?.querySelector('#se-stage-modal');
+            if (m && m.style.display !== 'none') {
+                m.style.display = 'none';
+                if (panel) panel.style.display = 'flex';
+                return;
+            }
             const state = getChatState();
             if (state.activeEvent?.id) {
                 openStageModalForEvent(state.activeEvent.id);
@@ -2551,6 +2710,7 @@
                 const body = root?.querySelector('#se-stage-modal-body');
                 const titleEl = root?.querySelector('#se-stage-modal-title');
                 if (modal && body) {
+                    if (panel) panel.style.display = 'none';
                     titleEl.textContent = `【${lastRawModelOutput.eventId || '最近生成'}】模型生成原文 (${lastRawModelOutput.time || ''})`;
                     body.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -2560,6 +2720,7 @@
                         <pre class="se-stage-raw-pre" id="se-last-raw-text">${escapeHtml(lastRawModelOutput.content)}</pre>
                     `;
                     modal.style.display = 'block';
+                    modal.scrollTop = 0;
                 }
                 return;
             }
@@ -2578,6 +2739,12 @@
         }
 
         if (action === 'open-stage-overview') {
+            const m = root?.querySelector('#se-stage-modal');
+            if (m && m.style.display !== 'none') {
+                m.style.display = 'none';
+                if (panel) panel.style.display = 'flex';
+                return;
+            }
             openStageOverview();
             return;
         }
@@ -5742,7 +5909,9 @@ const DIRECTOR_BLOCK = /(?:<(director_override|director_event|director_system_ov
         const modal = root?.querySelector('#se-stage-modal');
         const body = root?.querySelector('#se-stage-modal-body');
         const titleEl = root?.querySelector('#se-stage-modal-title');
+        const panel = root?.querySelector('#se-panel');
         if (!modal || !body) return;
+        if (panel) panel.style.display = 'none';
 
         titleEl.textContent = '独立系统纸条与暗箱机制说明 (v0.5.0)';
         body.innerHTML = `
@@ -5793,6 +5962,7 @@ const DIRECTOR_BLOCK = /(?:<(director_override|director_event|director_system_ov
             </div>
         `;
         modal.style.display = 'block';
+        modal.scrollTop = 0;
     }
 
     function openStageModalForEvent(eventId) {
@@ -5803,7 +5973,9 @@ const DIRECTOR_BLOCK = /(?:<(director_override|director_event|director_system_ov
         const modal = root?.querySelector('#se-stage-modal');
         const body = root?.querySelector('#se-stage-modal-body');
         const titleEl = root?.querySelector('#se-stage-modal-title');
+        const panel = root?.querySelector('#se-panel');
         if (!modal || !body) return;
+        if (panel) panel.style.display = 'none';
 
         const parsed = (Array.isArray(event.stages) && event.stages.length > 0)
             ? { stages: event.stages, theKey: event.theKey, goodEnd: event.goodEnd, badEnd: event.badEnd }
@@ -5902,6 +6074,7 @@ const DIRECTOR_BLOCK = /(?:<(director_override|director_event|director_system_ov
 
         body.innerHTML = html;
         modal.style.display = 'block';
+        modal.scrollTop = 0;
     }
 
     let promptViewerState = {
