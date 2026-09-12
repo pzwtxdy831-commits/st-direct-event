@@ -313,7 +313,7 @@
         }
     } catch (e) { /* 保持默认 */ }
 
-    const ICON_SRC = ASSET_BASE + '/director.svg';
+    const ICON_SRC = ASSET_BASE + '/director.png';
 
     let root = null;
     let initialized = false;
@@ -920,7 +920,7 @@
                     <label>默认事件总回合数 (回合范围 1 ~ 30；一次有效回复算一回合)</label>
                     <input id="se-default-turns" type="number" min="1" max="30" step="1" value="8" />
 
-                    <label>悬浮球图标 URL（留空使用默认导演场记板与导演棒图标）</label>
+                    <label>悬浮球图标 URL（留空使用默认图标）</label>
                     <input id="se-fab-icon" type="text" placeholder="https://... 或 data:image/..." autocomplete="off" />
                     <div class="se-inline-actions">
                         <button data-action="reset-fab">恢复默认图标</button>

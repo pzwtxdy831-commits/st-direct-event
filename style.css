@@ -3047,10 +3047,10 @@
     opacity: .35;
 }
 #st-direct-event-root .se-fab {
-    width: 48px;
-    height: 48px;
+    width: 50px;
+    height: 50px;
     border: 1px solid var(--se-border);
-    border-radius: 15px;
+    border-radius: 16px;
     background: var(--se-bg-panel);
     box-shadow: var(--se-shadow);
     animation: none;
@@ -3065,8 +3065,13 @@
     justify-content: center;
 }
 #st-direct-event-root .se-fab img {
-    width: 28px;
-    height: 28px;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: cover !important;
+    border-radius: inherit !important;
+    display: block !important;
     filter: none;
     animation: none;
     transform: none;
@@ -3076,27 +3081,7 @@
     background: var(--se-bg-hover);
     border-color: var(--se-accent);
 }
-
-/* 当用户设置了自定义图片 URL 时，自适应撑满整个悬浮球 */
-#st-direct-event-root .se-fab.se-fab-custom-img,
-#st-direct-event-root .se-fab:has(img:not([src*="director.svg"])) {
-    overflow: hidden !important;
-    padding: 0 !important;
-}
-
-#st-direct-event-root .se-fab.se-fab-custom-img img,
-#st-direct-event-root .se-fab img:not([src*="director.svg"]) {
-    width: 100% !important;
-    height: 100% !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-    object-fit: cover !important;
-    border-radius: inherit !important;
-    display: block !important;
-}
-
-#st-direct-event-root .se-fab.se-fab-custom-img:hover img,
-#st-direct-event-root .se-fab:hover img:not([src*="director.svg"]) {
+#st-direct-event-root .se-fab:hover img {
     transform: scale(1.08);
 }
 
