@@ -1166,7 +1166,7 @@
             }
         });
 
-        // 点击外部空白区域自动关闭悬浮主面板
+        // 点击外部空白区域自动关闭悬浮主面板与二级弹窗
         document.addEventListener('click', (e) => {
             if (!root) return;
             if (root.contains(e.target)) return;
@@ -1174,6 +1174,10 @@
             const panel = root.querySelector('#se-panel');
             if (panel && panel.style.display !== 'none') {
                 panel.style.display = 'none';
+            }
+            const stageModal = root.querySelector('#se-stage-modal');
+            if (stageModal && stageModal.style.display !== 'none') {
+                stageModal.style.display = 'none';
             }
         });
     }
@@ -5726,9 +5730,7 @@ const DIRECTOR_BLOCK = /(?:<(director_override|director_event|director_system_ov
                 if (btn) {
                     e.stopPropagation();
                     handleCapsuleAction(btn.dataset.capsuleAction);
-                    return;
                 }
-                toggleStageDetailModal();
             });
         }
         return capsule;
@@ -5758,19 +5760,12 @@ const DIRECTOR_BLOCK = /(?:<(director_override|director_event|director_system_ov
 
         capsule.innerHTML = `
             <div class="se-capsule-indicator"></div>
-            <div class="se-capsule-content" title="点击查看本事件分轮剧本小纸条与暗箱档案">
+            <div class="se-capsule-content">
                 <span class="se-capsule-badge">${escapeHtml(typeLabel)}</span>
-                <span class="se-capsule-title">${escapeHtml(active.id)}</span>
-                <span class="se-capsule-sep">/</span>
-                <span class="se-capsule-stage">${info.isFinalStage ? '本轮收束' : '等待行动'}</span>
-                <span class="se-capsule-sep">·</span>
                 <span class="se-capsule-turns">第 <strong>${info.curTurn}</strong>/${info.maxTurns} 回合</span>
             </div>
             <div class="se-capsule-actions">
-                <button class="se-cap-btn" data-capsule-action="add-turn" title="增加 1 个推进回合">+1回合</button>
-                <button class="se-cap-btn" data-capsule-action="sub-turn" title="减少 1 个推进回合">-1回合</button>
-                <button class="se-cap-btn se-cap-climax" data-capsule-action="climax" title="${state.activeEvent.type === 'romance' ? '立即跳至终局收束与回应' : (state.activeEvent.type === 'reasoning' ? '立即跳至终局对质与真相揭晓' : '立即跳至决胜高潮收束')}">${state.activeEvent.type === 'romance' ? '提前收束' : (state.activeEvent.type === 'reasoning' ? '提前结案' : '提前决胜')}</button>
-                <button class="se-cap-btn se-cap-close" data-capsule-action="end-event" title="结束当前事件">结束</button>
+                <button type="button" class="se-cap-btn se-cap-close" data-capsule-action="end-event" title="结束当前事件">结束</button>
             </div>
         `;
     }

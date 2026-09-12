@@ -1847,22 +1847,22 @@
 /* ---------- 浮动胶囊状态栏 (Floating Capsule) ---------- */
 .se-floating-capsule {
     position: fixed;
-    top: 16px;
+    top: 50px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 9999;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 7px 16px;
+    gap: 8px;
+    padding: 4px 12px;
     background: var(--se-bg-panel, rgba(15, 23, 42, 0.98));
     border: 1.5px solid var(--se-accent, #ff75a0);
     border-radius: 999px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85), 0 0 20px var(--se-accent-glow, rgba(255, 117, 160, 0.4));
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65), 0 0 14px var(--se-accent-glow, rgba(255, 117, 160, 0.3));
     backdrop-filter: blur(16px);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
-    cursor: pointer;
+    cursor: default;
 }
 
 .se-floating-capsule.se-capsule-hidden {
@@ -1981,20 +1981,39 @@
 /* ---------- 阶段大纲速查模态框 (Stage Modal) ---------- */
 .se-stage-modal {
     position: fixed;
-    top: 50%;
+    top: calc(14px + env(safe-area-inset-top, 0px));
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
     width: 660px;
-    max-width: 92vw;
-    max-height: 85vh;
+    max-width: min(660px, calc(100vw - 24px));
+    max-height: calc(100vh - 28px);
+    max-height: calc(100dvh - 28px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     background: var(--se-bg-panel, rgba(15, 23, 42, 0.99));
     border: 1.5px solid var(--se-border);
     border-radius: var(--se-radius-lg);
     box-shadow: var(--se-shadow);
-    z-index: 10001;
+    z-index: 10005;
     padding: 18px 20px;
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    box-sizing: border-box;
+}
+
+.se-stage-modal .se-modal-header {
+    position: sticky;
+    top: -18px;
+    margin: -18px -20px 12px -20px;
+    padding: 14px 20px 10px 20px;
+    background: var(--se-bg-panel);
+    z-index: 30;
+    border-bottom: 1px solid var(--se-border-subtle);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
 }
 
 .se-stage-modal-tip {
@@ -2783,25 +2802,37 @@
 #st-direct-event-root .se-stage-card-desc,
 #st-direct-event-root .se-stage-engine-desc { text-shadow: none !important; }
 #st-direct-event-root .se-floating-capsule {
-    top: max(12px, env(safe-area-inset-top));
+    top: calc(48px + env(safe-area-inset-top, 0px));
     max-width: calc(100vw - 24px);
-    gap: 10px;
-    padding: 8px 12px;
+    gap: 8px;
+    padding: 4px 12px;
     border: 1px solid var(--se-border);
-    border-radius: 14px;
-    box-shadow: 0 6px 22px rgba(0,0,0,.24);
-    flex-wrap: wrap;
+    border-radius: 999px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.35);
+    flex-wrap: nowrap;
 }
-#st-direct-event-root .se-capsule-content { min-width: 0; gap: 6px; flex-wrap: wrap; }
+#st-direct-event-root .se-capsule-content { min-width: 0; gap: 6px; flex-wrap: nowrap; }
 #st-direct-event-root .se-capsule-title { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
-#st-direct-event-root .se-capsule-actions { margin-left: auto; flex-wrap: wrap; }
+#st-direct-event-root .se-capsule-actions { margin-left: 6px; flex-wrap: nowrap; }
 #st-direct-event-root .se-capsule-indicator { animation: none; box-shadow: none; width: 6px; height: 6px; }
-#st-direct-event-root .se-cap-btn { min-height: 28px; border-radius: 7px; }
+#st-direct-event-root .se-cap-btn { min-height: 26px; border-radius: 999px; padding: 2px 10px; font-size: 11.5px; }
 #st-direct-event-root .se-stage-card { border-width: 1px; box-shadow: none; padding: 14px; }
 #st-direct-event-root .se-stage-raw-pre { color: var(--se-text-main); }
 @media (max-width: 540px) {
-    #st-direct-event-root .se-floating-capsule { width: max-content; justify-content: center; gap: 5px; }
-    #st-direct-event-root .se-capsule-actions { width: 100%; margin: 0; justify-content: center; }
+    #st-direct-event-root .se-floating-capsule {
+        top: calc(46px + env(safe-area-inset-top, 0px)) !important;
+        width: auto !important;
+        max-width: calc(100vw - 20px) !important;
+        justify-content: center;
+        gap: 6px;
+        padding: 3px 10px;
+        flex-wrap: nowrap;
+    }
+    #st-direct-event-root .se-capsule-actions {
+        width: auto;
+        margin: 0 0 0 4px;
+        justify-content: flex-end;
+    }
     #st-direct-event-root .se-capsule-title { max-width: 100px; }
     #st-direct-event-root .se-capsule-stage,
     #st-direct-event-root .se-capsule-sep { display: none; }
@@ -2809,8 +2840,26 @@
     #st-direct-event-root .se-events,
     #st-direct-event-root .se-presets,
     #st-direct-event-root .se-api-log,
-    #st-direct-event-root .se-sub-modal,
-    #st-direct-event-root .se-stage-modal { padding: 14px; }
+    #st-direct-event-root .se-sub-modal { padding: 14px; }
+    #st-direct-event-root .se-stage-modal {
+        top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+        bottom: auto !important;
+        left: 10px !important;
+        right: 10px !important;
+        transform: none !important;
+        margin: 0 auto !important;
+        width: auto !important;
+        max-width: min(520px, calc(100vw - 20px)) !important;
+        max-height: calc(100vh - 20px) !important;
+        max-height: calc(100dvh - 20px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain !important;
+        touch-action: pan-y !important;
+        padding: 14px !important;
+        padding-bottom: 30px !important;
+    }
     #st-direct-event-root .se-event-turns-row { align-items: flex-start; }
     #st-direct-event-root .se-event-turns-ctrls { flex-wrap: wrap; }
     #st-direct-event-root .se-sub-turn-card { min-height: 90px; }
